@@ -6,3 +6,5 @@ export * from './domain/content';
 export * from './domain/conversation';
 export * from './domain/roles';
 export * from './domain/ticket';
+export * from './api/chat';
+export * from './domain/category-suggester';

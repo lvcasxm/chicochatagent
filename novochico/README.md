@@ -38,6 +38,10 @@ O cadastro só acontece pelo login. Depois de entrar uma vez, promova a conta:
 npm run admin:grant -- seu.nome@dominio.gov.br
 ```
 
+## IA do chat
+
+Por padrão a IA é o Gemini (`AI_PROVIDER=gemini`), que precisa de `GEMINI_API_KEY` no `.env`; sem a chave, o chat responde que o serviço está indisponível. Para desenvolver a interface sem chave, use `AI_PROVIDER=fake` (já no `.env.example`): a IA responde com um roteiro. O fake é recusado em produção. Depois de atualizar, rode `npm run db:migrate`.
+
 ## Verificação
 
 ```bash

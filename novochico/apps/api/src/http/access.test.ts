@@ -284,8 +284,14 @@ describe.skipIf(!TEST_DATABASE_URL)('controle de acesso', () => {
         .map((route) => `${route.method} ${route.url}`)
         .sort();
       expect(protectedRoutes).toEqual([
+        'DELETE /api/conversations/:id',
+        'GET /api/bootstrap',
+        'GET /api/conversations',
+        'GET /api/conversations/:id',
         'GET /api/me',
         'POST /api/auth/logout',
+        'POST /api/conversations',
+        'POST /api/conversations/:id/messages',
         'POST /api/me/privacy-ack',
       ]);
     });

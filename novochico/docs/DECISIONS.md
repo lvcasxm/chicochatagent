@@ -402,3 +402,21 @@ Detalha a ADR-007 (componentes próprios), a ADR-024 (tipografia) e a ADR-025 (c
   - Dependências além da lista inicial: `@fontsource-variable/inter`, `@fontsource-variable/montserrat`, `@tailwindcss/vite`, `axe-core` e `@testing-library/user-event` (teste).
   - Se a Prefeitura publicar um design system oficial, os tokens em `tokens.css` e `global.css` são o único ponto de ajuste.
   - `vite.config.ts` lê só a `PORT` do `.env`: `loadEnv` também leva o `NODE_ENV` do arquivo, e um `.env` de desenvolvimento fazia o `vite build` gerar um build de desenvolvimento.
+
+## ADR-036 — Escolhas do chat e da integração com a IA (F4)
+
+Detalha as ADR-010, 011, 012 e 020.
+
+- **Contexto:** a F4 implementou a conversa, o stream, a triagem no servidor e a IA atrás de uma interface. Alguns pontos estavam em aberto.
+- **Decisão:**
+  1. **Interface `LlmClient`** com um único método, `streamChat`. `generateJson` entra na F5, quando houver quem o use. Implementações: Gemini (`@google/genai`), IA de desenvolvimento (`AI_PROVIDER=fake`, recusada em produção) e duplos de teste com roteiro.
+  2. **Sem chave do Gemini a API sobe**, e o chat responde 503 `AI_UNAVAILABLE`; a interface oferece o portal do GLPI (`GLPI_PORTAL_URL`). Isto contraria a tabela J, que marcava a chave como obrigatória, para permitir desenvolver e implantar por etapas.
+  3. **Erros anteriores ao primeiro trecho são HTTP**, não evento SSE: o servidor abre a conexão com a IA antes de responder e só então começa o stream. A mensagem do usuário já fica gravada, e repetir o mesmo texto a reaproveita (RF-028).
+  4. **Uma resposta por conversa por vez** (trava em memória, 409) e **20 mensagens por minuto por usuário** (em memória, 429). O limite geral por IP continua existindo.
+  5. **Filtro de marcadores** retém só o final do texto que ainda pode virar marcador; um marcador cortado no fim da resposta é descartado, nunca exibido. Marcadores são detectados no texto bruto.
+  6. **Escalonamento por frase** (fallback do legado) vale só em resposta completa.
+  7. **Cache do primeiro turno** guarda o texto bruto (com o marcador de tentativa, que continua contando); não guarda resposta que escala, com cara de dado pessoal ou curta, nem pergunta com e-mail, IP ou sequência de 5+ dígitos. A chave inclui a versão do prompt.
+  8. **Modo de teste do administrador** persiste na conversa (`ticket_form_test_mode`, migration 0001), para sobreviver a recarregar a página.
+  9. **Cliente sem TanStack Query**: a lista de conversas e os atalhos usam `fetch` em hooks próprios. A dependência não se justificou na F4.
+  10. A tela inicial não repete o logotipo, já presente no cabeçalho.
+- **Consequências:** o formulário de chamado ainda não existe (F5): a interface mostra o aviso de abertura liberada e o link do portal. O login real e o Gemini real continuam sem verificação até as credenciais entrarem no `.env`.

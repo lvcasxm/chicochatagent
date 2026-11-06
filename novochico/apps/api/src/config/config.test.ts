@@ -34,7 +34,40 @@ describe('loadConfig', () => {
       sessionSecret: SESSION_SECRET,
       allowedEmailDomains: ['prefeitura.example.test'],
       google: null,
+      ai: { provider: 'gemini', apiKey: undefined, chatModel: 'gemini-3.1-flash-lite' },
+      chatCacheEnabled: true,
+      glpiPortalUrl: null,
     });
+  });
+
+  it('configura a IA: chave, modelo, cache e portal; o fake é recusado em produção', () => {
+    const config = loadConfig({
+      ...VALID,
+      GEMINI_API_KEY: 'chave-ficticia',
+      GEMINI_CHAT_MODEL: 'modelo-x',
+      CHAT_CACHE_ENABLED: 'false',
+      GLPI_PORTAL_URL: 'https://chamados.example.test/',
+    });
+    expect(config.ai).toEqual({
+      provider: 'gemini',
+      apiKey: 'chave-ficticia',
+      chatModel: 'modelo-x',
+    });
+    expect(config.chatCacheEnabled).toBe(false);
+    expect(config.glpiPortalUrl).toBe('https://chamados.example.test/');
+    expect(loadConfig({ ...VALID, AI_PROVIDER: 'fake' }).ai).toEqual({ provider: 'fake' });
+    expect(() =>
+      loadConfig({
+        ...VALID,
+        NODE_ENV: 'production',
+        AI_PROVIDER: 'fake',
+        APP_PUBLIC_URL: 'https://chico.example.test',
+        SESSION_SECRET: 'x'.repeat(40),
+      }),
+    ).toThrow(/AI_PROVIDER/);
+    expect(() => loadConfig({ ...VALID, GLPI_PORTAL_URL: 'javascript:alert(1)' })).toThrow(
+      /GLPI_PORTAL_URL/,
+    );
   });
 
   it('converte a porta e aceita variáveis opcionais', () => {

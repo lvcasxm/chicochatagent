@@ -676,7 +676,8 @@ Toda leitura de ambiente em `apps/api/src/config`, validada por zod na partida. 
 | `ALLOWED_EMAIL_DOMAINS` | Sim | — | Lista separada por vírgula. O domínio do e-mail **e** o `hd` do Google precisam estar nela |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Não, juntos | — | Sem eles, a API sobe e o login redireciona para `/login?error=unavailable` |
 | `GOOGLE_HOSTED_DOMAIN` | Não | — | Só uma dica de conta enviada ao Google; a validação é feita no servidor |
-| `GEMINI_API_KEY` | Sim | — | Só no servidor |
+| `AI_PROVIDER` | Não | `gemini` | `gemini` ou `fake` (só desenvolvimento; recusado em produção) |
+| `GEMINI_API_KEY` | Para o Gemini | — | Só no servidor. Sem ela o chat responde 503 (ADR-036) |
 | `GEMINI_CHAT_MODEL`, `GEMINI_SUMMARY_MODEL` | Não | `gemini-3.1-flash-lite` | Modelo |
 | `GEMINI_INSIGHTS_MODEL` | Não | `gemini-2.5-flash` | `PEND-17` |
 | `GLPI_*` | Sim | Ver G.1 | Chamados |

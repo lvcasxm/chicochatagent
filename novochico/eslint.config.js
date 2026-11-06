@@ -172,4 +172,16 @@ export default defineConfig(
     files: ['**/*.test.{ts,tsx}', 'apps/*/vite.config.ts', 'apps/*/vitest.config.ts'],
     rules: { 'no-restricted-properties': 'off' },
   },
+  // Duplos de teste: geradores sem await e erros simulados são o jeito natural de escrevê-los.
+  {
+    files: ['**/*.test.{ts,tsx}', 'apps/api/src/integrations/gemini/fake.ts'],
+    rules: {
+      '@typescript-eslint/require-await': 'off',
+      '@typescript-eslint/only-throw-error': 'off',
+      '@typescript-eslint/prefer-promise-reject-errors': 'off',
+      'require-yield': 'off',
+      // `response.json()` é `any`: a asserção de tipo é o que dá forma ao resultado.
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+    },
+  },
 );

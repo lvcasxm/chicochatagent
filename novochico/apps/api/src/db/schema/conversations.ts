@@ -22,6 +22,8 @@ export const conversations = pgTable(
     issuePersists: boolean('issue_persists'),
     /** Preenchido quando a IA escala; sem isso o servidor recusa abrir chamado (ADR-012). */
     ticketFormUnlockedAt: tstz('ticket_form_unlocked_at'),
+    /** O formulário foi liberado pelo atalho de teste do administrador (RF-025). */
+    ticketFormTestMode: boolean('ticket_form_test_mode').notNull().default(false),
     resolvedAt: tstz('resolved_at'),
     finishedAt: tstz('finished_at'),
     outcome: conversationOutcome('outcome'),

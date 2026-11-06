@@ -15,6 +15,9 @@ export const testConfig: Config = {
   sessionSecret: 'segredo-de-teste-com-mais-de-trinta-e-dois-caracteres',
   allowedEmailDomains: ['prefeitura.example.test'],
   google: null,
+  ai: { provider: 'fake' },
+  chatCacheEnabled: true,
+  glpiPortalUrl: 'https://chamados.example.test/',
 };
 
 /** Logger real do projeto, gravando em memória para que os testes inspecionem a saída. */

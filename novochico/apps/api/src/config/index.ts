@@ -30,6 +30,15 @@ function isOriginUrl(value: string): boolean {
   }
 }
 
+function isHttpUrl(value: string): boolean {
+  try {
+    const { protocol } = new URL(value);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 const domainSchema = z
   .string()
   .regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/);
@@ -73,6 +82,20 @@ const envSchema = z
     GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
     // Apenas uma dica de conta enviada ao Google; a validação real é feita no servidor.
     GOOGLE_HOSTED_DOMAIN: domainSchema.optional(),
+
+    // 'gemini' fala com a IA de verdade (exige GEMINI_API_KEY). 'fake' usa respostas de roteiro,
+    // só para desenvolver sem chave; é recusado em produção.
+    AI_PROVIDER: z.enum(['gemini', 'fake']).default('gemini'),
+    // Só no servidor. Sem a chave, o chat responde que a IA está indisponível.
+    GEMINI_API_KEY: z.string().min(1).optional(),
+    GEMINI_CHAT_MODEL: z.string().min(1).default('gemini-3.1-flash-lite'),
+    // Cache das respostas do primeiro turno (H.7).
+    CHAT_CACHE_ENABLED: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((value) => value === 'true'),
+    // Portal de chamados do GLPI, oferecido quando a IA falha e na tela inicial (RF-027, RF-029).
+    GLPI_PORTAL_URL: z.string().refine(isHttpUrl).optional(),
   })
   .superRefine((env, ctx) => {
     if (env.GOOGLE_CLIENT_ID && !env.GOOGLE_CLIENT_SECRET) {
@@ -82,6 +105,9 @@ const envSchema = z
       ctx.addIssue({ code: 'custom', path: ['GOOGLE_CLIENT_ID'], message: 'ausente' });
     }
     if (env.NODE_ENV === 'production') {
+      if (env.AI_PROVIDER === 'fake') {
+        ctx.addIssue({ code: 'custom', path: ['AI_PROVIDER'], message: 'fake em produção' });
+      }
       if (env.SESSION_SECRET.startsWith(SECRET_PLACEHOLDER_PREFIX)) {
         ctx.addIssue({ code: 'custom', path: ['SESSION_SECRET'], message: 'exemplo' });
       }
@@ -97,6 +123,10 @@ export interface GoogleConfig {
   hostedDomain: string | undefined;
 }
 
+/** Como o chat fala com a IA. Sem `apiKey`, o chat responde que o serviço está indisponível. */
+export type AiConfig =
+  { provider: 'gemini'; apiKey: string | undefined; chatModel: string } | { provider: 'fake' };
+
 export type Config = {
   env: 'development' | 'test' | 'production';
   host: string;
@@ -111,6 +141,10 @@ export type Config = {
   allowedEmailDomains: string[];
   /** Nulo quando as credenciais do Google não foram configuradas. */
   google: GoogleConfig | null;
+  ai: AiConfig;
+  chatCacheEnabled: boolean;
+  /** Portal de chamados do GLPI; nulo quando não configurado. */
+  glpiPortalUrl: string | null;
 };
 
 export class ConfigError extends Error {
@@ -162,6 +196,12 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
             hostedDomain: data.GOOGLE_HOSTED_DOMAIN,
           }
         : null,
+    ai:
+      data.AI_PROVIDER === 'fake'
+        ? { provider: 'fake' }
+        : { provider: 'gemini', apiKey: data.GEMINI_API_KEY, chatModel: data.GEMINI_CHAT_MODEL },
+    chatCacheEnabled: data.CHAT_CACHE_ENABLED,
+    glpiPortalUrl: data.GLPI_PORTAL_URL ?? null,
   };
 }
 

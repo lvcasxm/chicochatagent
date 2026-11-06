@@ -39,6 +39,9 @@ export function registerErrorHandling(app: FastifyInstance): void {
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof AppError) {
       if (error.statusCode >= 500) request.log.error({ err: error }, 'Erro de aplicação');
+      if (error.retryAfterSeconds !== undefined) {
+        void reply.header('retry-after', String(error.retryAfterSeconds));
+      }
       return reply
         .status(error.statusCode)
         .send({ error: { code: error.code, message: error.message } } satisfies ErrorBody);

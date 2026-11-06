@@ -15,7 +15,7 @@ export class ApiError extends Error {
  * Chamada à API do próprio sistema. O cookie de sessão é HttpOnly e segue sozinho na mesma
  * origem; o navegador também envia o `Origin` que a API exige nas escritas.
  */
-async function call(path: string, init: RequestInit = {}): Promise<Response> {
+export async function call(path: string, init: RequestInit = {}): Promise<Response> {
   return fetch(path, {
     ...init,
     headers: {

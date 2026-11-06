@@ -19,6 +19,14 @@ export interface HomeCard {
   cannedMessage: string | null;
 }
 
+/** O que o chat precisa saber de cada card que abre conversa. */
+export interface ChatCategory {
+  key: string;
+  title: string;
+  shortLabel: string | null;
+  cannedMessage: string | null;
+}
+
 export function createContentService(repository: ContentRepository) {
   return {
     /**
@@ -35,6 +43,19 @@ export function createContentService(repository: ContentRepository) {
         );
       }
       return { version: row.version, content: row.content, publishedAt: row.publishedAt };
+    },
+
+    /** Categorias ativas que abrem conversa (não inclui links externos nem a oculta). */
+    async listChatCategories(): Promise<ChatCategory[]> {
+      const rows = await repository.listHomeCards();
+      return rows
+        .filter((row) => row.action === 'chat')
+        .map((row) => ({
+          key: row.key,
+          title: row.title,
+          shortLabel: row.shortLabel,
+          cannedMessage: row.cannedMessage,
+        }));
     },
 
     async listHomeCards(): Promise<HomeCard[]> {
