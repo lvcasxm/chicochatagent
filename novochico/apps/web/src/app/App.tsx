@@ -1,9 +1,20 @@
+import { lazy, Suspense, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router';
-import type { ReactNode } from 'react';
+import { ErrorState } from '../components/ErrorState';
+import { Skeleton } from '../components/Skeleton';
+import { ToastProvider } from '../components/Toast';
 import { LoginPage } from '../features/auth/LoginPage';
 import { PrivacyNotice } from '../features/auth/PrivacyNotice';
 import { HomePage } from '../features/home/HomePage';
 import { AuthProvider, useAuth } from './auth/AuthContext';
+import { AppShell } from './layouts/AppShell';
+import { ThemeProvider } from './theme/ThemeProvider';
+
+// A página de design existe só no desenvolvimento: no build de produção esta linha some
+// junto com o chunk dela.
+const DesignPage = import.meta.env.DEV
+  ? lazy(() => import('../features/design/DesignPage').then((m) => ({ default: m.DesignPage })))
+  : null;
 
 /**
  * Protege uma tela: leva ao login quem não entrou (guardando para onde voltar) e bloqueia
@@ -16,15 +27,25 @@ function RequireAuth({ children }: { children: ReactNode }) {
 
   switch (state.status) {
     case 'loading':
-      return <p role="status">Carregando…</p>;
+      return (
+        <AppShell>
+          <div role="status" className="flex max-w-reading flex-col gap-4">
+            <span className="sr-only">Carregando…</span>
+            <Skeleton className="h-10 w-2/3" />
+            <Skeleton className="h-6 w-full" />
+            <Skeleton className="h-6 w-5/6" />
+          </div>
+        </AppShell>
+      );
     case 'error':
       return (
-        <main>
-          <p role="alert">Não foi possível consultar o sistema.</p>
-          <button type="button" onClick={reload}>
-            Tentar novamente
-          </button>
-        </main>
+        <AppShell>
+          <ErrorState
+            title="Não foi possível consultar o sistema."
+            description="Verifique a sua conexão e tente de novo."
+            onRetry={reload}
+          />
+        </AppShell>
       );
     case 'anonymous': {
       const destination = `${location.pathname}${location.search}`;
@@ -39,6 +60,16 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      {DesignPage && (
+        <Route
+          path="/_design"
+          element={
+            <Suspense fallback={null}>
+              <DesignPage />
+            </Suspense>
+          }
+        />
+      )}
       <Route
         path="*"
         element={
@@ -53,10 +84,14 @@ export function AppRoutes() {
 
 export function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
-    </BrowserRouter>
+    <ThemeProvider>
+      <ToastProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </BrowserRouter>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }

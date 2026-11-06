@@ -620,10 +620,12 @@ O PDF traz escalas de 90% a 10% de cada cor. Neutros da interface vêm dessas es
 | Uso | Fonte | Situação |
 |---|---|---|
 | Logotipo | Velocity (arquivo de imagem) | `[DOC]` |
-| Títulos | Montserrat 600/700, sem caixa alta longa | `[PROVISÓRIO: ADR-024]` |
+| Títulos | Montserrat 500 (títulos 1 e 2) e 600 (título 3), sem caixa alta longa | `[PROVISÓRIO: ADR-024, ADR-035]` |
 | Interface e texto | Inter 400/500/600 | `[PROVISÓRIO: ADR-024]` |
 
 **Atenção:** a Velocity é a fonte oficial, mas o arquivo do legado só tem letras sem acento, sem números nem pontuação, e sua licença de uso web não foi encontrada. **Não copie `velocity.ttf`.** Use token `--font-display` em títulos, para troca sem refatoração `[PENDENTE: PEND-09]`. Pesos auto-hospedados em WOFF2.
+
+Escala completa, espaçamento, raios, movimento e componentes: `DESIGN_SYSTEM.md` (ADR-035). A estrutura vem do design system do Portal do Cidadão; a cor continua sendo a desta seção.
 
 ### I.4 Assinaturas `[DOC]`
 Três assinaturas, em versões sobre branco, azul e preto: (1) vertical; (2) horizontal; (3) só símbolo. Versões preto e branco só quando as demais não couberem. Mantenha alinhamentos, proporções e espaçamentos originais. Não distorça, recolora, sombreie nem recorte.

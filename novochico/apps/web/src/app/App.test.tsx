@@ -5,6 +5,7 @@ import { LOGIN_ERROR_CODES, PRIVACY_NOTICE_VERSION } from '@chicochat/shared';
 import { LOGIN_ERROR_MESSAGES } from '../features/auth/login-messages';
 import { AppRoutes } from './App';
 import { AuthProvider } from './auth/AuthContext';
+import { ThemeProvider } from './theme/ThemeProvider';
 
 const ME = {
   id: '3f9a1c52-8d4e-4b7a-9c1e-2a6b5d8e0f13',
@@ -42,11 +43,13 @@ function mockApi(routes: Record<string, Handler>) {
 
 function renderAt(path: string) {
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
-    </MemoryRouter>,
+    <ThemeProvider>
+      <MemoryRouter initialEntries={[path]}>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </MemoryRouter>
+    </ThemeProvider>,
   );
 }
 

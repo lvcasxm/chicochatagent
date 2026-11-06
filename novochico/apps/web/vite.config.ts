@@ -1,15 +1,29 @@
 /// <reference types="vitest/config" />
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 
-export default defineConfig(({ mode }) => {
-  // A porta da API vem do .env da raiz, a mesma fonte usada pela própria API.
-  const env = loadEnv(mode, fileURLToPath(new URL('../..', import.meta.url)), '');
-  const apiPort = env.PORT || '3000';
+/**
+ * Porta da API, lida do .env da raiz (a mesma fonte usada pela própria API). Lê só a PORT de
+ * propósito: `loadEnv` também leva o NODE_ENV do arquivo, e um .env de desenvolvimento faria o
+ * `vite build` gerar um build de desenvolvimento.
+ */
+function apiPortFromEnvFile(): string {
+  try {
+    const text = readFileSync(fileURLToPath(new URL('../../.env', import.meta.url)), 'utf8');
+    return /^PORT=(\d+)\s*$/m.exec(text)?.[1] ?? '3000';
+  } catch {
+    return '3000';
+  }
+}
+
+export default defineConfig(() => {
+  const apiPort = apiPortFromEnvFile();
 
   return {
-    plugins: [react()],
+    plugins: [tailwindcss(), react()],
     server: {
       host: '127.0.0.1',
       port: 5173,
@@ -19,6 +33,9 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       environment: 'jsdom',
+      setupFiles: ['src/test/setup.ts'],
+      // tokens.test.ts lê o CSS dos tokens como texto; por padrão o Vitest o esvazia.
+      css: { include: [/tokens\.css/] },
       include: ['src/**/*.test.{ts,tsx}'],
     },
   };

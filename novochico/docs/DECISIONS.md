@@ -382,3 +382,23 @@ Detalha a ADR-027 (login só com Google) e a ADR-009 (papéis no banco).
   - **Google real não testado:** os testes usam um provedor OIDC local com o `openid-client` real. O login com o Google de verdade depende das credenciais OAuth (`PEND-01`, `PEND-17`) e precisa ser conferido com contas institucionais reais.
   - A tela inicial gera um `GET /api/me` com resposta 401 para quem não entrou. O navegador a mostra no console, sem efeito.
   - Dependências além da lista de stack: `@fastify/cookie` e `jose`.
+
+## ADR-035 — Design system: estrutura do Portal do Cidadão, cor do ChicoChat+
+
+Detalha a ADR-007 (componentes próprios), a ADR-024 (tipografia) e a ADR-025 (contraste do azul). Descrição completa em `DESIGN_SYSTEM.md`.
+
+- **Contexto:** a Prefeitura ainda não tem um design system único. O Portal do Cidadão tem um, documentado (tipografia, espaçamento, raios, alturas, movimento, componentes), que já usa Montserrat e Inter. A identidade do ChicoChat+ (paleta, logotipo) é oficial e deve permanecer.
+- **Decisão:**
+  1. Adotar do Portal a **estrutura**: escala de texto, escala de espaçamento em múltiplos de 4 px, pílula para o que é clicável, 16 px para cards e painéis, 8 px para etiquetas, altura de 48 px em botões e campos, alvo de toque de 44 px, foco de 3 px, sombra única só em quem flutua e as curvas e durações de movimento.
+  2. Manter do ChicoChat+ a **cor**: `#FBFBFB`, `#111110` e `#24BCEC`, com texto `#111110` sobre o azul (ADR-025). O papel do azul escuro do Portal (menu, hover e foco) é do `#111110` no tema claro e do azul no escuro. `danger` e `warning` vêm do Portal (`#8a1c13` e `#9a5200`), com variantes para o escuro.
+  3. Não adotar do Portal o gradiente do topo (seção I.7) nem o fundo cinza com cards brancos: aqui o fundo é `#FBFBFB` e a separação é por tom e espaço.
+  4. Títulos em Montserrat 500 (títulos 1 e 2) e 600 (título 3), como no Portal. Isto substitui o "600/700" da seção I.3.
+  5. Tailwind v4 com os tokens da marca; `@theme` zera os padrões, então telas só usam tokens. Tema por `data-theme`, aplicado por `public/theme-init.js` antes da primeira pintura; sem script em linha, para a CSP da F9.
+  6. Fontes variáveis em WOFF2 via `@fontsource-variable/*`, só o subconjunto latino.
+  7. `Markdown` com `react-markdown` e `remark-gfm`, lista fechada de elementos, sem HTML, sem imagem e com `urlTransform` que só aceita `http`, `https` e `mailto`.
+- **Justificativa:** quem usa o Portal e o ChicoChat+ reconhece a mesma família, e cada sistema mantém a sua marca. As regras do Portal vêm de medições de acessibilidade e de usabilidade documentadas por ele.
+- **Alternativas:** copiar as cores do Portal (apagaria a identidade do ChicoChat+); ignorar o Portal (dois sistemas municipais sem relação visual).
+- **Consequências:**
+  - Dependências além da lista inicial: `@fontsource-variable/inter`, `@fontsource-variable/montserrat`, `@tailwindcss/vite`, `axe-core` e `@testing-library/user-event` (teste).
+  - Se a Prefeitura publicar um design system oficial, os tokens em `tokens.css` e `global.css` são o único ponto de ajuste.
+  - `vite.config.ts` lê só a `PORT` do `.env`: `loadEnv` também leva o `NODE_ENV` do arquivo, e um `.env` de desenvolvimento fazia o `vite build` gerar um build de desenvolvimento.
