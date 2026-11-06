@@ -8,8 +8,13 @@ export const testConfig: Config = {
   host: '127.0.0.1',
   port: 0,
   logLevel: 'info',
+  trustProxy: false,
   databaseUrl: 'postgres://usuario:senha-ficticia@127.0.0.1:1/teste',
   databaseMigrationUrl: undefined,
+  appOrigin: 'http://127.0.0.1:5173',
+  sessionSecret: 'segredo-de-teste-com-mais-de-trinta-e-dois-caracteres',
+  allowedEmailDomains: ['prefeitura.example.test'],
+  google: null,
 };
 
 /** Logger real do projeto, gravando em memória para que os testes inspecionem a saída. */

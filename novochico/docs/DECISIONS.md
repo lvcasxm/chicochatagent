@@ -356,3 +356,29 @@ Decisões pequenas e reversíveis tomadas ao implementar o banco.
 - **Consequências:**
   - Números em `CHECK` e em `WHERE` de índice precisam passar por `lit()`; sem isso o Drizzle gera parâmetros (`$1`), inválidos em DDL. Um teste de migração em banco limpo protege contra isso.
   - O documento inicial das instruções é uma transposição que precisa de revisão da SATD antes de ir para produção; o resumo da versão 1 lista os pontos pendentes.
+
+## ADR-034 — Escolhas de autenticação e controle de acesso da F2
+
+Detalha a ADR-027 (login só com Google) e a ADR-009 (papéis no banco).
+
+- **Contexto:** a F2 implementou o login, as sessões e o controle de acesso. Vários pontos estavam em aberto ou mostraram risco durante a implementação.
+- **Decisão:**
+  1. **Assinatura do `id_token` conferida explicitamente.** O `openid-client` não verifica a assinatura de um token recebido direto do endpoint do provedor por TLS, o que a especificação OIDC permite. Um teste mostrou que ele aceitava um token assinado por chave desconhecida. A conferência passa a ser feita com `jose`, usando as chaves publicadas pelo Google, só com o algoritmo `RS256`. É defesa em profundidade contra TLS interceptado. `jose` virou dependência de execução.
+  2. **Política de identidade, no servidor:** o domínio do e-mail (comparação exata, nunca por sufixo) **e** o `hd` do Google precisam estar em `ALLOWED_EMAIL_DOMAINS`, e o e-mail deve estar verificado (apenas o booleano `true`). Sem `hd` (conta pessoal), a conta é recusada mesmo com e-mail do domínio. O `hd` pode diferir do domínio do e-mail, para domínios-alias. `GOOGLE_HOSTED_DOMAIN` é só uma dica de conta enviada ao Google e é opcional.
+  3. **Login sem credenciais:** a API sobe e `/api/auth/google` redireciona para `/login?error=unavailable`, em vez de responder 503, porque é uma navegação do navegador. As falhas de login são sempre códigos genéricos (`LoginErrorCode`), sem detalhes.
+  4. **Sessão:** cookie `chico_session` (ou `__Host-chico_session` com https), `HttpOnly`, `SameSite=Lax`, `Secure` quando https. O banco guarda o hash SHA-256 do identificador. Valem 8h de inatividade e 7 dias no total; a última atividade é gravada no máximo uma vez por minuto. O usuário é consultado a cada requisição, então rebaixar ou desativar vale de imediato.
+  5. **Cookie temporário do login:** `chico_oidc`, assinado com `SESSION_SECRET` (`@fastify/cookie`), restrito a `/api/auth`, válido por 10 minutos e descartado em qualquer resultado. Guarda `state`, `nonce`, verificador PKCE e destino.
+  6. **CSRF:** toda escrita exige `Origin` igual a `APP_PUBLIC_URL`, e a ausência também é recusada; roda antes da autenticação.
+  7. **Acesso negado por padrão:** a rota exige login salvo `config.public: true`. `roles` e `requiresPrivacyAck` também são declarados na rota. O `routeCatalog` permite testar que nenhuma rota fica pública sem querer. Rota inexistente responde 404 sem login.
+  8. **Limites:** 30 tentativas por 15 minutos por IP no início e na volta do login, e 600 por minuto por IP no geral. `TRUST_PROXY` (padrão `false`) controla se o IP vem do proxy.
+  9. **Contas:** o mesmo e-mail com `sub` diferente é recusado (`ACCOUNT_CONFLICT`), sem unir contas automaticamente. O primeiro login simultâneo cria uma única conta. A conta desativada não entra e perde as sessões.
+  10. **Primeiro administrador:** o usuário entra uma vez e depois se roda `npm run admin:grant -- <e-mail> [papel]`. A troca de papel é transacional, auditada (sem e-mail nem nome) e nunca remove o último administrador, mesmo com pedidos simultâneos (bloqueio de linha).
+  11. **Aviso de privacidade:** a versão fica em `PRIVACY_NOTICE_VERSION` (`@chicochat/shared`). Mudar o texto exige mudar a versão, e todos passam a precisar aceitar de novo. O texto vem do sistema anterior, sem o emoji.
+  12. **Web:** `react-router` (já na stack) com `/login` e as demais rotas protegidas; `AuthProvider` consulta `GET /api/me`. A página de saúde provisória da F0 foi substituída.
+- **Justificativa:** cada ponto foi escolhido por fechar uma falha do sistema anterior (S-06, S-07 e relacionadas) ou por reduzir uma classe de erro: negar por padrão evita rota aberta por esquecimento, e só guardar hashes evita que um vazamento do banco entregue sessões.
+- **Alternativas:** confiar só no `openid-client` (a conferência extra custa pouco); proibir contas sem `hd` apenas pela dica do Google (a dica não é uma validação); guardar o papel na sessão (ficaria desatualizado); lista de rotas protegidas em vez de negar por padrão (esquecer uma abre a rota).
+- **Consequências e riscos:**
+  - **IP compartilhado:** sem `TRUST_PROXY=true` atrás do proxy da Prefeitura, todos aparecem com o mesmo IP e dividem o limite de 30 tentativas por 15 minutos. Em um horário de pico de login isso pode bloquear usuários legítimos. Definir na F10 (`PEND-08`).
+  - **Google real não testado:** os testes usam um provedor OIDC local com o `openid-client` real. O login com o Google de verdade depende das credenciais OAuth (`PEND-01`, `PEND-17`) e precisa ser conferido com contas institucionais reais.
+  - A tela inicial gera um `GET /api/me` com resposta 401 para quem não entrou. O navegador a mostra no console, sem efeito.
+  - Dependências além da lista de stack: `@fastify/cookie` e `jose`.

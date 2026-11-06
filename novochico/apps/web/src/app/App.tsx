@@ -1,42 +1,62 @@
-import { useEffect, useState } from 'react';
-import type { HealthResponse } from '@chicochat/shared';
-import { fetchHealth } from '../lib/api';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router';
+import type { ReactNode } from 'react';
+import { LoginPage } from '../features/auth/LoginPage';
+import { PrivacyNotice } from '../features/auth/PrivacyNotice';
+import { HomePage } from '../features/home/HomePage';
+import { AuthProvider, useAuth } from './auth/AuthContext';
 
-type State = { kind: 'loading' } | { kind: 'ready'; health: HealthResponse } | { kind: 'error' };
+/**
+ * Protege uma tela: leva ao login quem não entrou (guardando para onde voltar) e bloqueia
+ * com o aviso de privacidade quem ainda não o aceitou. Isto só organiza a interface; quem
+ * garante o acesso é a API, que recusa o que for pedido sem login ou sem aceite.
+ */
+function RequireAuth({ children }: { children: ReactNode }) {
+  const { state, reload } = useAuth();
+  const location = useLocation();
 
-function describe(state: State): string {
-  switch (state.kind) {
+  switch (state.status) {
     case 'loading':
-      return 'Verificando o sistema…';
+      return <p role="status">Carregando…</p>;
     case 'error':
-      return 'Não foi possível consultar o sistema.';
-    case 'ready':
-      return state.health.status === 'ok'
-        ? 'Sistema em funcionamento.'
-        : 'Banco de dados indisponível.';
+      return (
+        <main>
+          <p role="alert">Não foi possível consultar o sistema.</p>
+          <button type="button" onClick={reload}>
+            Tentar novamente
+          </button>
+        </main>
+      );
+    case 'anonymous': {
+      const destination = `${location.pathname}${location.search}`;
+      return <Navigate to={`/login?redirect=${encodeURIComponent(destination)}`} replace />;
+    }
+    case 'authenticated':
+      return state.me.privacyAccepted ? children : <PrivacyNotice />;
   }
 }
 
-/** Página provisória da F0: confirma que web e API conversam. A interface real vem na F3/F4. */
-export function App() {
-  const [state, setState] = useState<State>({ kind: 'loading' });
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchHealth(controller.signal).then(
-      (health) => setState({ kind: 'ready', health }),
-      (error: unknown) => {
-        if (error instanceof DOMException && error.name === 'AbortError') return;
-        setState({ kind: 'error' });
-      },
-    );
-    return () => controller.abort();
-  }, []);
-
+export function AppRoutes() {
   return (
-    <main>
-      <h1>ChicoChat+</h1>
-      <p role="status">{describe(state)}</p>
-    </main>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="*"
+        element={
+          <RequireAuth>
+            <HomePage />
+          </RequireAuth>
+        }
+      />
+    </Routes>
+  );
+}
+
+export function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

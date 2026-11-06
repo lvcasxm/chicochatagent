@@ -70,5 +70,6 @@ docker compose up -d   # PostgreSQL de desenvolvimento
 npm run dev            # web + API
 npm run db:migrate     # aplica migrations
 npm run db:seed        # conteúdo inicial, sem dados reais
+npm run admin:grant -- <e-mail> [papel]   # papel de um usuário que já entrou (padrão: admin)
 npm run lint && npm run typecheck && npm test
 ```

@@ -17,7 +17,26 @@ npm run dev              # API em :3100 e web em :5173
 
 Para alterar o schema, edite `apps/api/src/db/schema/` e rode `npm run db:generate`; revise o SQL gerado antes de aplicar.
 
-Abra http://127.0.0.1:5173 e a página mostra o estado da API e do banco.
+Abra http://127.0.0.1:5173. Sem as credenciais do Google (abaixo), a tela de login aparece e avisa que o login está indisponível.
+
+Se o seu `.env` é anterior à F2, copie dele as variáveis novas do `.env.example` (`APP_PUBLIC_URL`, `SESSION_SECRET`, `ALLOWED_EMAIL_DOMAINS`) e gere um `SESSION_SECRET` aleatório; a API recusa subir sem elas.
+
+## Login com Google
+
+O sistema só aceita contas institucionais, por login com o Google.
+
+1. No Google Cloud, crie um cliente OAuth do tipo **Aplicativo da Web**.
+2. Cadastre o redirecionamento `http://127.0.0.1:5173/api/auth/google/callback` (troque pelo seu `APP_PUBLIC_URL`).
+3. Coloque `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` no `.env`. **Nunca** em arquivos versionados.
+4. Reinicie `npm run dev` e entre com uma conta do domínio de `ALLOWED_EMAIL_DOMAINS`.
+
+### Primeiro administrador
+
+O cadastro só acontece pelo login. Depois de entrar uma vez, promova a conta:
+
+```bash
+npm run admin:grant -- seu.nome@dominio.gov.br
+```
 
 ## Verificação
 

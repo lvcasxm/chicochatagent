@@ -3,21 +3,31 @@ import { createApp } from '../app';
 import { AppError } from '../lib/errors';
 import { captureLogger, fakeDb, testConfig } from '../../test/helpers';
 
+/** Rotas de apoio abertas de propósito: aqui se testa o tratamento de erros, não o acesso. */
+const PUBLIC = { config: { public: true } };
+
+/** Escritas só são aceitas com o Origin do sistema (proteção CSRF). */
+const WRITE_HEADERS = { origin: testConfig.appOrigin, 'content-type': 'application/json' };
+
 async function appWithTestRoutes() {
   const { logger, output } = captureLogger();
-  const app = createApp({ config: testConfig, logger, db: fakeDb(() => Promise.resolve()) });
-  app.get('/boom', () => {
+  const app = await createApp({
+    config: testConfig,
+    logger,
+    db: fakeDb(() => Promise.resolve()),
+  });
+  app.get('/boom', PUBLIC, () => {
     throw new Error('detalhe interno: postgres://u:senha-vazada@host/db');
   });
-  app.get('/known', () => {
+  app.get('/known', PUBLIC, () => {
     throw new AppError('CONFLICT', 409, 'Mensagem segura.');
   });
-  app.get('/known-500', () => {
+  app.get('/known-500', PUBLIC, () => {
     throw new AppError('UPSTREAM', 502, 'Serviço externo indisponível.', {
       cause: new Error('token-interno-123'),
     });
   });
-  app.post('/echo', () => ({ ok: true }));
+  app.post('/echo', PUBLIC, () => ({ ok: true }));
   await app.ready();
   return { app, output };
 }
@@ -63,7 +73,7 @@ describe('tratamento de erros', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/echo',
-      headers: { 'content-type': 'application/json' },
+      headers: WRITE_HEADERS,
       payload: '{"quebrado":',
     });
     expect(res.statusCode).toBe(400);
@@ -77,7 +87,7 @@ describe('tratamento de erros', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/echo',
-      headers: { 'content-type': 'application/json' },
+      headers: WRITE_HEADERS,
       payload: JSON.stringify({ texto: 'a'.repeat(70 * 1024) }),
     });
     expect(res.statusCode).toBe(413);

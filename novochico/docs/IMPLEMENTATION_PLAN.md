@@ -107,6 +107,8 @@ flowchart LR
 
 **Riscos:** alguma conta institucional não conseguir autenticar. Confirme com contas reais, com o responsável presente.
 
+**Situação:** implementada (ADR-034). Verificado com provedor OIDC local e `openid-client` real; **o login com o Google de verdade ainda não foi exercitado**, pois depende das credenciais OAuth do responsável.
+
 ---
 
 ## F3 — Design system e estrutura visual
