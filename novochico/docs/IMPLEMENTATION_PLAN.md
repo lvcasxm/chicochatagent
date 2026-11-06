@@ -269,6 +269,8 @@ flowchart LR
 
 **Riscos:** volume da Análise IA, com teto de amostra e aviso quando houver corte; instrução ruim publicada, mitigada por ensaio e restauração. Revise a tela de instruções com o Opus antes de encerrar: ela precisa ser clara para quem não é desenvolvedor.
 
+**Situação:** implementada (ADR-040). Falta a revisão da tela de instruções pelo Opus e a verificação com Gemini real (ensaio, assistente, Análise IA, caso 18 do Anexo D).
+
 ---
 
 ## F9 — Endurecimento
