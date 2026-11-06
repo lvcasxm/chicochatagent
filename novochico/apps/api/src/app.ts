@@ -21,6 +21,9 @@ import { createSessionService } from './modules/auth/sessions';
 import { createChat, createLlmFromConfig } from './modules/chat';
 import { registerChatRoutes } from './modules/chat/routes';
 import { createContent } from './modules/content';
+import { createFeedback } from './modules/feedback';
+import { registerFeedbackRoutes } from './modules/feedback/routes';
+import { createSessionCloser } from './modules/sessions';
 import { registerContentRoutes } from './modules/content/routes';
 import { createConversations } from './modules/conversations';
 import { createGlpiFromConfig, createTickets } from './modules/tickets';
@@ -29,6 +32,13 @@ import { registerTranscriptRoutes } from './modules/transcripts/routes';
 import { registerTicketsRoutes } from './modules/tickets/routes';
 import { createUsers } from './modules/users';
 import { registerUsersRoutes } from './modules/users/routes';
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    /** Tarefas que rodam fora das requisições (RF-064). */
+    jobs: { closeInactiveConversations: () => Promise<number> };
+  }
+}
 
 export interface AppDeps {
   config: Config;
@@ -146,6 +156,18 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
   registerChatRoutes(app, { chat, conversations });
   registerTicketsRoutes(app, { tickets });
   registerTranscriptRoutes(app, { transcripts });
+
+  const feedback = createFeedback({
+    orm: deps.db.orm,
+    conversations,
+    analytics,
+    logger: deps.logger,
+  });
+  registerFeedbackRoutes(app, { feedback });
+
+  // Tarefas periódicas: o `server.ts` as agenda; os testes as chamam direto, com o tempo controlado.
+  const closer = createSessionCloser({ conversations, analytics, logger: deps.logger });
+  app.decorate('jobs', { closeInactiveConversations: () => closer.closeInactive() });
 
   return app;
 }

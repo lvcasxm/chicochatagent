@@ -460,3 +460,19 @@ Detalha as ADR-016 e 037 e a seção G.7.
   - Técnicos sem conta com papel não leem transcrições (PEND-10).
   - O texto do chamado criado antes da F6 não tem link; o link só existe nos chamados novos.
   - A tela de "Meus chamados" não tem paginação: são no máximo 50.
+
+## ADR-039 — Avaliação, eventos e encerramento por inatividade (F7)
+
+Detalha a ADR-018.
+
+- **Contexto:** a F7 fecha o ciclo: pedir a avaliação, registrar os eventos que faltavam e encerrar as sessões inativas.
+- **Decisão:**
+  1. **Avaliação** (`POST /api/conversations/:id/feedback`): nota de 1 a 5, sugestão opcional de até 1000 caracteres, corpo estrito. Só o dono, e só depois de um chamado aberto de verdade (`escalated`) ou de uma resolução confirmada (`resolved`); antes disso, 409. **Uma por conversa**, garantida pela restrição única do banco: envios simultâneos gravam uma só, e a segunda recebe 409 "já enviada". A avaliação aponta para o chamado mais recente aberto de verdade, quando houver.
+  2. **`rating_received`** leva só a nota e se há sugestão, nunca o texto. Falhar ao registrar qualquer evento não desfaz a operação principal.
+  3. **Estado na conversa:** `triage.feedback` é `unavailable`, `available` ou `given`, calculado no servidor.
+  4. **"Pular"** é guardado no navegador, por conversa: o pedido não volta nela nem ao reabri-la. O servidor continua dizendo "disponível", porque pular não é uma resposta que o sistema precise registrar.
+  5. **Regex de resolução mantida** (B-04): os botões "Resolveu / Não resolveu" dependem de aprovação (PEND-18) e não foram criados.
+  6. **Encerramento por inatividade:** tarefa periódica (5 em 5 minutos, uma varredura por vez, também na partida) fecha as conversas sem atividade há 30 minutos. O fim é o instante em que a sessão expirou, não o da varredura. Sem desfecho vira `no_outcome`; `resolved` e `escalated` permanecem. Gera `conversation_finished` com o desfecho. Repetir a varredura não fecha nem registra de novo.
+  7. **Voltar a conversar** depois do fechamento reabre a conversa (`finished_at` nulo, `no_outcome` volta a nulo) e abre outra sessão de atendimento, que gera outro `conversation_finished` ao fechar.
+  8. **Testes de integração** passam a ter 30 s por teste: cada arquivo cria um banco e roda em paralelo, e com a máquina carregada os 5 s padrão geravam falhas que não eram do código.
+- **Consequências e riscos:** a tarefa roda no processo da API (uma instância, ADR-003); com mais de uma, as varreduras se repetiriam sem dano, mas sem ganho. "Pular" não é medido.

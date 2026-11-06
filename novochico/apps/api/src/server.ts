@@ -16,6 +16,24 @@ const logger = buildLogger(config);
 const db = createDatabase(config, logger);
 const app = await buildApp({ config, logger, db });
 
+/** Intervalo da tarefa que encerra conversas inativas (a sessão de atendimento dura 30 min). */
+const SESSION_SWEEP_MS = 5 * 60_000;
+let sweeping = false;
+async function sweepSessions(): Promise<void> {
+  // Uma varredura por vez: se uma demorar, a próxima espera.
+  if (sweeping) return;
+  sweeping = true;
+  try {
+    await app.jobs.closeInactiveConversations();
+  } catch (err) {
+    logger.error({ err }, 'Falha ao encerrar conversas inativas');
+  } finally {
+    sweeping = false;
+  }
+}
+const sweepTimer = setInterval(() => void sweepSessions(), SESSION_SWEEP_MS);
+sweepTimer.unref();
+
 let shuttingDown = false;
 async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return;
@@ -25,6 +43,7 @@ async function shutdown(signal: string): Promise<void> {
   const force = setTimeout(() => process.exit(1), 10_000);
   force.unref();
   try {
+    clearInterval(sweepTimer);
     await app.close();
     await db.close();
     process.exit(0);
@@ -38,6 +57,7 @@ process.on('SIGTERM', () => void shutdown('SIGTERM'));
 
 try {
   await app.listen({ host: config.host, port: config.port });
+  void sweepSessions();
 } catch (err) {
   logger.fatal({ err }, 'Não foi possível abrir a porta');
   process.exit(1);

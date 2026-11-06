@@ -293,6 +293,7 @@ describe.skipIf(!TEST_DATABASE_URL)('controle de acesso', () => {
         'GET /api/transcripts/:token',
         'POST /api/auth/logout',
         'POST /api/conversations',
+        'POST /api/conversations/:id/feedback',
         'POST /api/conversations/:id/messages',
         'POST /api/conversations/:id/ticket-check',
         'POST /api/conversations/:id/tickets',

@@ -241,6 +241,8 @@ flowchart LR
 
 **Riscos:** regex de resolução imprecisa (B-04). Prefira botões "Resolveu / Não resolveu" na interface se aprovados (`PEND-18`).
 
+**Situação:** implementada (ADR-039). Os botões "Resolveu / Não resolveu" não foram criados, por depender de aprovação (PEND-18).
+
 ---
 
 ## F8 — Administração

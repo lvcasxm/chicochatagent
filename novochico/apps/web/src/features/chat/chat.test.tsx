@@ -300,6 +300,7 @@ describe('conversa', () => {
       ticketFormUnlocked: false,
       testMode: false,
       resolved: false,
+      feedback: 'unavailable',
     },
   };
   const MESSAGES_URL = `POST /api/conversations/${CONVERSATION_ID}/messages`;
@@ -466,6 +467,7 @@ describe('lista de conversas', () => {
             ticketFormUnlocked: false,
             testMode: false,
             resolved: false,
+            feedback: 'unavailable',
           },
         }),
     });

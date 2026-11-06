@@ -604,7 +604,8 @@ describe.skipIf(!TEST_DATABASE_URL)('chamados: abertura no GLPI', () => {
       expect(await attempts()).toHaveLength(1);
       const statuses = results.map((r) => r.status).sort();
       expect(statuses.filter((s) => s === 201)).toHaveLength(1);
-      expect(statuses.every((s) => s === 201 || s === 409)).toBe(true);
+      // Quem chega depois da primeira terminar recebe o resultado gravado (200), e quem chega durante, 409.
+      expect(statuses.every((s) => s === 201 || s === 200 || s === 409)).toBe(true);
 
       // Terminada a primeira, repetir devolve o resultado gravado.
       const replay = await open(who, id, BODY, key);

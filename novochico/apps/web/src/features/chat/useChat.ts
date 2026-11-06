@@ -19,6 +19,7 @@ const EMPTY_TRIAGE: TriageState = {
   ticketFormUnlocked: false,
   testMode: false,
   resolved: false,
+  feedback: 'unavailable',
 };
 
 export interface UseChatOptions {
@@ -118,7 +119,11 @@ export function useChat(conversationId: string | null, options: UseChatOptions) 
         setTriage((t) => ({ ...t, ticketFormUnlocked: true, testMode: event.data.testMode }));
         break;
       case 'feedback_prompt':
-        setTriage((t) => ({ ...t, resolved: true }));
+        setTriage((t) => ({
+          ...t,
+          resolved: true,
+          feedback: t.feedback === 'given' ? 'given' : 'available',
+        }));
         break;
       case 'done':
         setTitle(event.data.title);
@@ -202,5 +207,10 @@ export function useChat(conversationId: string | null, options: UseChatOptions) 
     ]);
   }, []);
 
-  return { messages, triage, title, status, failure, send, retry, appendNotice };
+  /** A avaliação passa a ser oferecida (chamado aberto) ou foi enviada. */
+  const setFeedback = useCallback((feedback: 'available' | 'given') => {
+    setTriage((t) => ({ ...t, feedback }));
+  }, []);
+
+  return { messages, triage, title, status, failure, send, retry, appendNotice, setFeedback };
 }
