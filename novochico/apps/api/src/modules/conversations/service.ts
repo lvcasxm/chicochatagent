@@ -4,6 +4,7 @@ import type {
   ConversationSummary,
   TriageState,
 } from '@chicochat/shared';
+import { ATTENDANCE_SESSION_TIMEOUT_MINUTES } from '@chicochat/shared';
 import { AppError } from '../../lib/errors';
 import type {
   ConversationPatch,
@@ -45,13 +46,20 @@ function toMessage(row: MessageRow): ChatMessage {
   };
 }
 
-export function toTriageState(row: ConversationRow): TriageState {
+/** A avaliação só se abre depois de um chamado aberto ou de uma resolução confirmada (RF-060). */
+function feedbackStatus(row: ConversationRow, given: boolean): TriageState['feedback'] {
+  if (given) return 'given';
+  return row.outcome === 'resolved' || row.outcome === 'escalated' ? 'available' : 'unavailable';
+}
+
+export function toTriageState(row: ConversationRow, feedbackGiven = false): TriageState {
   return {
     resolutionAttempts: row.resolutionAttempts,
     issuePersists: row.issuePersists,
     ticketFormUnlocked: row.ticketFormUnlockedAt !== null,
     testMode: row.ticketFormUnlockedAt !== null && row.ticketFormTestMode,
     resolved: row.resolvedAt !== null,
+    feedback: feedbackStatus(row, feedbackGiven),
   };
 }
 
@@ -101,7 +109,7 @@ export function createConversationsService(deps: {
       return {
         ...toSummary(row),
         messages: rows.map(toMessage),
-        triage: toTriageState(row),
+        triage: toTriageState(row, await repository.hasFeedback(id)),
       };
     },
 
@@ -133,6 +141,31 @@ export function createConversationsService(deps: {
         )
         .slice(-TRANSCRIPT_LIMIT)
         .map((row) => ({ role: row.role, content: clip(row.content, HISTORY_MESSAGE_MAX_LENGTH) }));
+    },
+
+    /**
+     * Fecha as conversas sem atividade há 30 minutos (RF-064): marca o fim da sessão de
+     * atendimento e, sem desfecho (nem resolvida nem escalada), o desfecho vira `no_outcome`.
+     * O fim é o instante em que a sessão expirou, não o da varredura. Devolve o que fechou.
+     */
+    async closeInactive(limit = 200): Promise<ConversationRow[]> {
+      const at = now();
+      const timeoutMs = ATTENDANCE_SESSION_TIMEOUT_MINUTES * 60_000;
+      const inactive = await repository.listInactive(new Date(at.getTime() - timeoutMs), limit);
+      const closed: ConversationRow[] = [];
+      for (const row of inactive) {
+        closed.push(
+          await repository.update(
+            row.id,
+            {
+              finishedAt: new Date(row.lastMessageAt.getTime() + timeoutMs),
+              ...(row.outcome === null ? { outcome: 'no_outcome' as const } : {}),
+            },
+            at,
+          ),
+        );
+      }
+      return closed;
     },
 
     async lastMessage(id: string): Promise<MessageRow | null> {

@@ -92,3 +92,24 @@ export async function* sendMessage(
 
   yield* readChatEvents(response.body);
 }
+
+/** Avaliação do atendimento. 409 "já enviada" não é erro para a pessoa: o objetivo foi atingido. */
+export async function submitFeedback(
+  conversationId: string,
+  rating: number,
+  suggestion: string,
+): Promise<void> {
+  const response = await call(`/api/conversations/${encodeURIComponent(conversationId)}/feedback`, {
+    method: 'POST',
+    body: JSON.stringify({
+      rating,
+      ...(suggestion.trim() ? { suggestion: suggestion.trim() } : {}),
+    }),
+  });
+  if (response.status === 409) {
+    const code = ((await response.json().catch(() => null)) as { error?: { code?: string } } | null)
+      ?.error?.code;
+    if (code === 'FEEDBACK_ALREADY_SENT') return;
+  }
+  if (!response.ok) throw new ApiError(response.status);
+}

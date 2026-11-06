@@ -48,6 +48,11 @@ export const triageStateSchema = z.object({
   /** O formulário foi liberado pelo atalho de teste do administrador. */
   testMode: z.boolean(),
   resolved: z.boolean(),
+  /**
+   * Avaliação do atendimento: `available` depois de um chamado aberto ou de uma resolução
+   * confirmada, `given` quando já foi enviada (uma por conversa), `unavailable` antes disso.
+   */
+  feedback: z.enum(['unavailable', 'available', 'given']),
 });
 export type TriageState = z.infer<typeof triageStateSchema>;
 

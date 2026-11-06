@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 import type { DbExecutor } from '../../db/client';
-import { conversations, messages } from '../../db/schema';
+import { conversations, feedbacks, messages } from '../../db/schema';
 
 export type ConversationRow = typeof conversations.$inferSelect;
 export type MessageRow = typeof messages.$inferSelect;
@@ -20,6 +20,7 @@ export type ConversationPatch = Partial<
     | 'resolvedAt'
     | 'outcome'
     | 'lastMessageAt'
+    | 'finishedAt'
     | 'deletedAt'
   >
 >;
@@ -102,6 +103,32 @@ export function createConversationsRepository(db: DbExecutor) {
         .orderBy(desc(messages.createdAt), desc(messages.id))
         .limit(limit);
       return rows.reverse();
+    },
+
+    /** A conversa já tem avaliação? Há no máximo uma por conversa (restrição única). */
+    async hasFeedback(conversationId: string): Promise<boolean> {
+      const [row] = await db
+        .select({ id: feedbacks.id })
+        .from(feedbacks)
+        .where(eq(feedbacks.conversationId, conversationId))
+        .limit(1);
+      return row !== undefined;
+    },
+
+    /** Conversas abertas cuja última atividade é anterior a `before` (a sessão de atendimento acabou). */
+    async listInactive(before: Date, limit: number): Promise<ConversationRow[]> {
+      return db
+        .select()
+        .from(conversations)
+        .where(
+          and(
+            isNull(conversations.finishedAt),
+            isNotNull(conversations.lastMessageAt),
+            lt(conversations.lastMessageAt, before),
+          ),
+        )
+        .orderBy(asc(conversations.lastMessageAt))
+        .limit(limit);
     },
 
     async countMessages(conversationId: string): Promise<number> {

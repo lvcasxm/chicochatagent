@@ -14,6 +14,8 @@ import { HomeScreen } from './HomeScreen';
 import { MessageList } from './MessageList';
 import { useChat } from './useChat';
 import { useChatLists } from './useChatLists';
+import { wasSkipped } from '../../lib/feedback-skip';
+import { FeedbackCard } from './FeedbackCard';
 import { TicketDialog } from '../tickets/TicketDialog';
 
 /** Tela do chat: início com atalhos, conversa em andamento e lista de conversas ao lado. */
@@ -26,6 +28,8 @@ export function ChatPage() {
   const [signOutFailed, setSignOutFailed] = useState(false);
   const [ticketOpen, setTicketOpen] = useState(false);
   const [ticketCreated, setTicketCreated] = useState(false);
+  // Conversa cujo pedido de avaliação foi dispensado ou respondido nesta tela.
+  const [feedbackDoneFor, setFeedbackDoneFor] = useState<string | null>(null);
 
   const chat = useChat(conversationId ?? null, {
     onCreated: (id) => void navigate(`/c/${id}`, { replace: true }),
@@ -157,9 +161,27 @@ export function ChatPage() {
             onCreated={(response) => {
               setTicketCreated(true);
               chat.appendNotice(response.message);
+              // Chamado aberto: o servidor liberou a avaliação (RF-060).
+              chat.setFeedback('available');
             }}
           />
         )}
+
+        {conversationId &&
+          ((chat.triage.feedback === 'available' &&
+            !wasSkipped(conversationId) &&
+            feedbackDoneFor !== conversationId) ||
+            feedbackDoneFor === `sent:${conversationId}`) && (
+            <FeedbackCard
+              key={conversationId}
+              conversationId={conversationId}
+              onSent={() => {
+                setFeedbackDoneFor(`sent:${conversationId}`);
+                chat.setFeedback('given');
+              }}
+              onSkipped={() => setFeedbackDoneFor(conversationId)}
+            />
+          )}
 
         <div className="sticky bottom-0 mt-auto bg-bg pt-2 pb-4">{composer}</div>
       </div>

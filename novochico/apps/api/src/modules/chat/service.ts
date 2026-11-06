@@ -230,6 +230,9 @@ export function createChatService(deps: ChatServiceDeps) {
         const title = chooseTitle(row, text, isFirstMessage, categories);
         row = await conversations.update(conversationId, {
           lastMessageAt: at,
+          // Voltou a conversar: a sessão anterior já tinha sido fechada por inatividade; começa outra.
+          finishedAt: null,
+          ...(row.outcome === 'no_outcome' ? { outcome: null } : {}),
           ...(title ? { title } : {}),
           ...(newSession ? { attendanceSessionId: randomUUID() } : {}),
           ...(userSignal === 'persists' ? { issuePersists: true } : {}),
