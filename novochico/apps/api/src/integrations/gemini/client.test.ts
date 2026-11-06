@@ -6,11 +6,16 @@ import { CHAT_GENERATION, LlmError, type LlmChunk } from './llm';
 
 function sdkWith(
   chunks: Array<{ text?: string; usage?: [number, number]; finish?: string }>,
-  options: { failAt?: unknown } = {},
+  options: { failAt?: unknown; jsonText?: string } = {},
 ) {
   const requests: unknown[] = [];
   const sdk: GeminiSdk = {
     models: {
+      generateContent(params) {
+        requests.push(params);
+        if (options.failAt !== undefined) return Promise.reject(options.failAt);
+        return Promise.resolve({ text: options.jsonText });
+      },
       generateContentStream(params) {
         requests.push(params);
         if (options.failAt !== undefined && chunks.length === 0)
@@ -222,5 +227,46 @@ describe('duplos de desenvolvimento e teste', () => {
       { role: 'user', content: 'não resolveu' },
     ]);
     expect(escalation).toContain('<<OPEN_TICKET_FORM>>');
+  });
+});
+
+describe('generateJson', () => {
+  const signal = new AbortController().signal;
+
+  it('pede JSON, com o prompt como instrução de sistema, e devolve o objeto lido', async () => {
+    const { sdk, requests } = sdkWith([], { jsonText: '{"titulo":"x","urgencia":3}' });
+    const client = createGeminiClient({ apiKey: 'k', model: 'modelo-resumo', sdk });
+    const result = await client.generateJson({ system: 'REGRAS', user: 'Conversa', signal });
+    expect(result).toEqual({ titulo: 'x', urgencia: 3 });
+
+    const request = requests[0] as {
+      model: string;
+      contents: Array<{ role: string; parts: Array<{ text: string }> }>;
+      config: Record<string, unknown>;
+    };
+    expect(request.model).toBe('modelo-resumo');
+    expect(request.config.responseMimeType).toBe('application/json');
+    expect(request.config.systemInstruction).toBe('REGRAS');
+    expect(request.contents).toEqual([{ role: 'user', parts: [{ text: 'Conversa' }] }]);
+  });
+
+  it('resposta que não é JSON vira falha nossa, para tentar de novo', async () => {
+    const { sdk } = sdkWith([], { jsonText: 'Claro! Aqui está o chamado...' });
+    const client = createGeminiClient({ apiKey: 'k', model: 'm', sdk });
+    const error = await client
+      .generateJson({ system: 's', user: 'u', signal })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(LlmError);
+    expect((error as LlmError).kind).toBe('unavailable');
+  });
+
+  it('limite e queda do provedor viram erro nosso, sem texto do provedor', async () => {
+    const { sdk } = sdkWith([], { failAt: new ApiError({ message: 'cota abc-9', status: 429 }) });
+    const client = createGeminiClient({ apiKey: 'k', model: 'm', sdk });
+    const error = await client
+      .generateJson({ system: 's', user: 'u', signal })
+      .catch((e: unknown) => e);
+    expect((error as LlmError).kind).toBe('rate_limited');
+    expect((error as LlmError).message).not.toContain('abc-9');
   });
 });

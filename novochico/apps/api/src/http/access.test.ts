@@ -292,6 +292,8 @@ describe.skipIf(!TEST_DATABASE_URL)('controle de acesso', () => {
         'POST /api/auth/logout',
         'POST /api/conversations',
         'POST /api/conversations/:id/messages',
+        'POST /api/conversations/:id/ticket-check',
+        'POST /api/conversations/:id/tickets',
         'POST /api/me/privacy-ack',
       ]);
     });

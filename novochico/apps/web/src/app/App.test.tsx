@@ -24,7 +24,8 @@ function json(status: number, body?: unknown) {
 }
 
 const DEFAULT_ROUTES: Record<string, () => Response> = {
-  'GET /api/bootstrap': () => json(200, { cards: [], glpiPortalUrl: null, canUseTestMode: false }),
+  'GET /api/bootstrap': () =>
+    json(200, { cards: [], glpiPortalUrl: null, canUseTestMode: false, lastSector: null }),
   'GET /api/conversations': () => json(200, { conversations: [] }),
 };
 

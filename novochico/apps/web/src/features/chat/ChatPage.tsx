@@ -14,6 +14,7 @@ import { HomeScreen } from './HomeScreen';
 import { MessageList } from './MessageList';
 import { useChat } from './useChat';
 import { useChatLists } from './useChatLists';
+import { TicketDialog } from '../tickets/TicketDialog';
 
 /** Tela do chat: início com atalhos, conversa em andamento e lista de conversas ao lado. */
 export function ChatPage() {
@@ -23,6 +24,8 @@ export function ChatPage() {
   const lists = useChatLists();
   const [listOpen, setListOpen] = useState(false);
   const [signOutFailed, setSignOutFailed] = useState(false);
+  const [ticketOpen, setTicketOpen] = useState(false);
+  const [ticketCreated, setTicketCreated] = useState(false);
 
   const chat = useChat(conversationId ?? null, {
     onCreated: (id) => void navigate(`/c/${id}`, { replace: true }),
@@ -124,18 +127,38 @@ export function ChatPage() {
           <Notice tone="neutral">
             <p className="type-label">Abertura de chamado liberada</p>
             <p className="mt-1">
-              {chat.triage.testMode ? 'Modo de teste. ' : ''}O formulário do chamado chega na
-              próxima etapa. Enquanto isso, você pode abrir o chamado direto pelo portal.
+              {ticketCreated
+                ? 'O chamado desta conversa já foi aberto.'
+                : `${chat.triage.testMode ? 'Modo de teste. ' : ''}Preencha o formulário para registrar o chamado.`}
             </p>
-            {portal && (
-              <p className="mt-2">
+            <div className="mt-3 flex flex-wrap items-center gap-4">
+              {!ticketCreated && <Button onClick={() => setTicketOpen(true)}>Abrir chamado</Button>}
+              {portal && !ticketCreated && (
                 <a href={portal} target="_blank" rel="noopener noreferrer">
-                  Abrir o portal de chamados
+                  Prefiro abrir pelo portal
                   <span className="sr-only"> (abre em nova aba)</span>
                 </a>
-              </p>
-            )}
+              )}
+            </div>
           </Notice>
+        )}
+
+        {conversationId && (
+          <TicketDialog
+            // Recomeça o formulário a cada conversa.
+            key={conversationId}
+            open={ticketOpen}
+            onOpenChange={setTicketOpen}
+            conversationId={conversationId}
+            requester={{ name: state.me.fullName, email: state.me.email }}
+            lastSector={lists.bootstrap?.lastSector ?? null}
+            testMode={chat.triage.testMode}
+            portalUrl={portal}
+            onCreated={(response) => {
+              setTicketCreated(true);
+              chat.appendNotice(response.message);
+            }}
+          />
         )}
 
         <div className="sticky bottom-0 mt-auto bg-bg pt-2 pb-4">{composer}</div>

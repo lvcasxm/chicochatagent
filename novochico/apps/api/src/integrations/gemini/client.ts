@@ -4,6 +4,7 @@ import { CHAT_GENERATION, LlmError, type LlmChunk, type LlmClient } from './llm'
 /** O que o cliente usa do SDK, para os testes trocarem por um duplo sem rede. */
 export interface GeminiSdk {
   models: {
+    generateContent(params: GenerateContentParameters): Promise<{ text?: string }>;
     generateContentStream(params: GenerateContentParameters): Promise<
       AsyncIterable<{
         text?: string;
@@ -40,6 +41,32 @@ export function createGeminiClient(options: GeminiClientOptions): LlmClient {
   const sdk: GeminiSdk = options.sdk ?? new GoogleGenAI({ apiKey: options.apiKey });
 
   return {
+    async generateJson({ system, user, signal }) {
+      let text: string | undefined;
+      try {
+        const response = await sdk.models.generateContent({
+          model: options.model,
+          contents: [{ role: 'user', parts: [{ text: user }] }],
+          config: {
+            systemInstruction: system,
+            abortSignal: signal,
+            responseMimeType: 'application/json',
+            temperature: CHAT_GENERATION.temperature,
+            topP: CHAT_GENERATION.topP,
+          },
+        });
+        text = response.text;
+      } catch (error) {
+        throw toLlmError(error, signal);
+      }
+      try {
+        return JSON.parse(text ?? '') as unknown;
+      } catch (error) {
+        // O modelo respondeu algo que não é JSON: conta como falha, para tentar de novo.
+        throw new LlmError('unavailable', { cause: error });
+      }
+    },
+
     async *streamChat({ system, messages, signal }): AsyncGenerator<LlmChunk> {
       let promptTokens: number | undefined;
       let completionTokens: number | undefined;

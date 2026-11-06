@@ -11,6 +11,7 @@ import { registerHealthRoute } from './http/health';
 import { registerRouteCatalog } from './http/route-catalog';
 import { createGoogleOidcClient, type GoogleOidcClient } from './integrations/google/oidc';
 import type { LlmClient } from './integrations/gemini/llm';
+import type { GlpiClient } from './integrations/glpi/glpi';
 import type { Logger } from './lib/logger';
 import { createAnalytics } from './modules/analytics';
 import { isSecureOrigin, sessionCookieName } from './modules/auth/cookies';
@@ -22,6 +23,8 @@ import { registerChatRoutes } from './modules/chat/routes';
 import { createContent } from './modules/content';
 import { registerContentRoutes } from './modules/content/routes';
 import { createConversations } from './modules/conversations';
+import { createGlpiFromConfig, createTickets } from './modules/tickets';
+import { registerTicketsRoutes } from './modules/tickets/routes';
 import { createUsers } from './modules/users';
 import { registerUsersRoutes } from './modules/users/routes';
 
@@ -39,6 +42,10 @@ export interface AppDeps {
    * quando falta a chave). Os testes passam um duplo com roteiro.
    */
   llm?: LlmClient | null;
+  /** IA do resumo do chamado. Por padrão vem da configuração; os testes passam um duplo. */
+  summaryLlm?: LlmClient | null;
+  /** GLPI. Por padrão vem da configuração (nulo sem credenciais); os testes passam um fake. */
+  glpi?: GlpiClient | null;
   /** Relógio, para os testes controlarem o tempo (expiração de sessão, por exemplo). */
   now?: () => Date;
 }
@@ -114,8 +121,25 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
     logger: deps.logger,
     now,
   });
-  registerContentRoutes(app, { content, glpiPortalUrl: config.glpiPortalUrl });
+  const analytics = createAnalytics(deps.db.orm);
+  const tickets = createTickets({
+    orm: deps.db.orm,
+    conversations,
+    content,
+    analytics,
+    glpi: deps.glpi !== undefined ? deps.glpi : createGlpiFromConfig(config.glpi),
+    summaryLlm: deps.summaryLlm !== undefined ? deps.summaryLlm : configuredLlm.summaryLlm,
+    ticketIpRegex: config.ticketIpRegex,
+    logger: deps.logger,
+    now,
+  });
+  registerContentRoutes(app, {
+    content,
+    glpiPortalUrl: config.glpiPortalUrl,
+    lastSector: (userId) => tickets.lastSector(userId),
+  });
   registerChatRoutes(app, { chat, conversations });
+  registerTicketsRoutes(app, { tickets });
 
   return app;
 }

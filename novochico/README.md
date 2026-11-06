@@ -42,6 +42,10 @@ npm run admin:grant -- seu.nome@dominio.gov.br
 
 Por padrão a IA é o Gemini (`AI_PROVIDER=gemini`), que precisa de `GEMINI_API_KEY` no `.env`; sem a chave, o chat responde que o serviço está indisponível. Para desenvolver a interface sem chave, use `AI_PROVIDER=fake` (já no `.env.example`): a IA responde com um roteiro. O fake é recusado em produção. Depois de atualizar, rode `npm run db:migrate`.
 
+## GLPI
+
+Por padrão o GLPI é de verdade (`GLPI_PROVIDER=glpi`), com as variáveis `GLPI_*` no `.env`; sem elas, a abertura de chamado responde que o sistema está indisponível. Para desenvolver sem GLPI, use `GLPI_PROVIDER=fake` (já no `.env.example`): os chamados são simulados. O fake é recusado em produção. **Nunca** teste contra o GLPI de produção sem o responsável presente (ADR-029).
+
 ## Verificação
 
 ```bash
