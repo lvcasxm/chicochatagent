@@ -6,6 +6,12 @@ import * as schema from './schema';
 
 export type OrmClient = NodePgDatabase<typeof schema>;
 
+/**
+ * O que um repositório precisa para consultar: serve tanto para o cliente normal quanto para
+ * uma transação aberta com `orm.transaction(...)`, de modo que a mesma lógica rode nos dois.
+ */
+export type DbExecutor = Pick<OrmClient, 'select' | 'insert' | 'update' | 'delete'>;
+
 /** Superfície do banco usada fora de `db/`. Só os repositórios dos módulos usam `orm`. */
 export interface Database {
   orm: OrmClient;

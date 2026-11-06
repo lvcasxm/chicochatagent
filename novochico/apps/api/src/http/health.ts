@@ -7,7 +7,8 @@ import type { Database } from '../db/client';
  * o motivo da falha fica no log, nunca na resposta.
  */
 export function registerHealthRoute(app: FastifyInstance, deps: { db: Database }): void {
-  app.get('/api/health', async (request, reply) => {
+  // Pública de propósito: o proxy e o contêiner precisam consultá-la sem login.
+  app.get('/api/health', { config: { public: true } }, async (request, reply) => {
     try {
       await deps.db.ping();
     } catch (err) {

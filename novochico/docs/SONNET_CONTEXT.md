@@ -666,12 +666,14 @@ Toda leitura de ambiente em `apps/api/src/config`, validada por zod na partida. 
 | Variável | Obrig. | Padrão | Finalidade |
 |---|---|---|---|
 | `NODE_ENV`, `PORT`, `LOG_LEVEL` | Não | `development`, `3000`, `info` | Execução |
-| `APP_PUBLIC_URL` | Sim | — | Links de transcrição e OIDC. Legado: `chicochat.pl.mg.gov.br` |
+| `TRUST_PROXY` | Não | `false` | `true` só atrás de proxy reverso confiável. Sem isso, em produção, todos aparecem com o IP do proxy e **dividem o limite de tentativas de login** (ADR-034) |
+| `APP_PUBLIC_URL` | Sim | — | Origem pública, sem caminho: define o `Origin` aceito nas escritas, o endereço de volta do login e os links de transcrição. Em produção, https. Legado: `chicochat.pl.mg.gov.br` |
 | `DATABASE_URL` | Sim | — | Usuário da aplicação |
 | `DATABASE_MIGRATION_URL` | Só em migração | — | Usuário de migrations |
-| `SESSION_SECRET` | Sim | — | ≥ 32 bytes |
-| `ALLOWED_EMAIL_DOMAINS` | Sim | — | Lista separada por vírgula |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_HOSTED_DOMAIN` | Sim | — | OIDC |
+| `SESSION_SECRET` | Sim | — | ≥ 32 caracteres, aleatório. Assina o cookie temporário do login. O valor de exemplo do `.env.example` é recusado em produção |
+| `ALLOWED_EMAIL_DOMAINS` | Sim | — | Lista separada por vírgula. O domínio do e-mail **e** o `hd` do Google precisam estar nela |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Não, juntos | — | Sem eles, a API sobe e o login redireciona para `/login?error=unavailable` |
+| `GOOGLE_HOSTED_DOMAIN` | Não | — | Só uma dica de conta enviada ao Google; a validação é feita no servidor |
 | `GEMINI_API_KEY` | Sim | — | Só no servidor |
 | `GEMINI_CHAT_MODEL`, `GEMINI_SUMMARY_MODEL` | Não | `gemini-3.1-flash-lite` | Modelo |
 | `GEMINI_INSIGHTS_MODEL` | Não | `gemini-2.5-flash` | `PEND-17` |
@@ -689,7 +691,11 @@ Links institucionais do conteúdo (Joseias e guias) ficam nas categorias, no ban
 
 ## K. Segurança
 
-**Autenticação.** Cookie de sessão no servidor, `HttpOnly`, `Secure`, `SameSite=Lax`. Duração `[PROPOSTA]`: 8h de inatividade, 7 dias no máximo. Identificador de sessão aleatório, armazenado só em hash. Fluxo OIDC com `state`, `nonce` e PKCE; sem armazenar tokens do Google.
+**Autenticação** (implementada na F2; detalhes e justificativas na ADR-034). Cookie de sessão `HttpOnly`, `SameSite=Lax`, `Secure` e com prefixo `__Host-` quando o endereço público é https. Duração: 8h de inatividade, 7 dias no máximo. Identificador aleatório de 32 bytes, armazenado só em hash SHA-256. Fluxo OIDC com `state`, `nonce` e PKCE, mais conferência explícita da assinatura do `id_token`; os tokens do Google não são guardados. O papel do usuário é lido do banco a cada requisição.
+
+**Controle de acesso.** O padrão é **negar**: toda rota exige login, e só `config: { public: true }` abre uma rota. Também se declara na rota `roles` e `requiresPrivacyAck`. `app.routeCatalog` lista todas as rotas, e um teste garante que só as públicas esperadas existem. Rota inexistente responde 404 sem exigir login.
+
+**CSRF.** Toda escrita (POST, PUT, PATCH, DELETE) exige o cabeçalho `Origin` igual a `APP_PUBLIC_URL`; a ausência também é recusada. A checagem ocorre antes da autenticação.
 
 **Autorização.** Matriz da seção F.4. Checar posse em serviços, respondendo 404 quando o recurso não é do usuário. Primeiro admin via CLI. Nenhuma identidade no código.
 
