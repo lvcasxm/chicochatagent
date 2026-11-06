@@ -1,0 +1,2 @@
+CREATE POLICY "Admins view all conversas" ON public.conversas FOR SELECT TO authenticated USING (has_role(auth.uid(),'admin'));
+CREATE POLICY "Admins view all mensagens" ON public.mensagens FOR SELECT TO authenticated USING (has_role(auth.uid(),'admin'));

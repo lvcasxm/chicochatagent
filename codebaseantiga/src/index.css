@@ -1,0 +1,132 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap");
+
+@font-face {
+  font-family: 'Velocity';
+  src: url('/src/assets/fonts/velocity.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Brand: #fbfbfb / #111110 / #24bcec */
+    --background: 0 0% 98%;
+    --foreground: 60 3% 7%;
+    --card: 0 0% 100%;
+    --card-foreground: 60 3% 7%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 60 3% 7%;
+    --primary: 194 84% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 194 15% 94%;
+    --secondary-foreground: 60 3% 7%;
+    --muted: 210 10% 95%;
+    --muted-foreground: 210 6% 45%;
+    --accent: 194 84% 47%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 210 10% 90%;
+    --input: 210 10% 90%;
+    --ring: 194 84% 53%;
+    --radius: 0.75rem;
+    --chart-1: 194 84% 53%;
+    --chart-2: 194 84% 43%;
+    --chart-3: 142 76% 36%;
+    --chart-4: 43 96% 56%;
+    --chart-5: 0 72% 51%;
+    --chat-assistant: 210 10% 95%;
+    --chat-assistant-foreground: 60 3% 7%;
+
+    /* Sidebar - dark brand */
+    --sidebar-background: 60 3% 7%;
+    --sidebar-foreground: 0 0% 85%;
+    --sidebar-primary: 194 84% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 60 3% 14%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 60 3% 16%;
+    --sidebar-ring: 194 84% 53%;
+
+    /* Bot chat tokens */
+    --bot-bg: 0 0% 98%;
+    --bot-fg: 60 3% 7%;
+    --bot-primary: 194 84% 53%;
+    --bot-primary-fg: 0 0% 100%;
+    --bot-muted: 210 10% 94%;
+    --bot-muted-fg: 210 7% 36%;
+    --bot-card: 0 0% 100%;
+    --bot-border: 210 12% 84%;
+  }
+
+  .dark {
+    --background: 220 15% 8%;
+    --foreground: 0 0% 93%;
+    --card: 220 13% 11%;
+    --card-foreground: 0 0% 93%;
+    --popover: 220 13% 11%;
+    --popover-foreground: 0 0% 93%;
+    --primary: 194 84% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 12% 16%;
+    --secondary-foreground: 0 0% 93%;
+    --muted: 220 12% 16%;
+    --muted-foreground: 210 6% 55%;
+    --accent: 194 84% 47%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 10% 18%;
+    --input: 220 10% 18%;
+    --ring: 194 84% 53%;
+    --chat-assistant: 220 12% 16%;
+    --chat-assistant-foreground: 0 0% 93%;
+
+    /* Sidebar - even darker */
+    --sidebar-background: 220 15% 5%;
+    --sidebar-foreground: 0 0% 85%;
+    --sidebar-primary: 194 84% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 12% 12%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 220 10% 14%;
+    --sidebar-ring: 194 84% 53%;
+
+    /* Bot chat dark */
+    --bot-bg: 220 15% 8%;
+    --bot-fg: 0 0% 93%;
+    --bot-primary: 194 84% 53%;
+    --bot-primary-fg: 0 0% 100%;
+    --bot-muted: 220 12% 16%;
+    --bot-muted-fg: 210 7% 62%;
+    --bot-card: 220 13% 11%;
+    --bot-border: 220 10% 23%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Montserrat', sans-serif;
+  }
+}
