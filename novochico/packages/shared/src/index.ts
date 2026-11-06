@@ -12,3 +12,4 @@ export * from './api/tickets';
 export * from './domain/sectors';
 export * from './api/my-tickets';
 export * from './api/feedback';
+export * from './api/admin';

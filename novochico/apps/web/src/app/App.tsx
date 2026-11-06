@@ -12,6 +12,11 @@ import { AuthProvider, useAuth } from './auth/AuthContext';
 import { AppShell } from './layouts/AppShell';
 import { ThemeProvider } from './theme/ThemeProvider';
 
+// A administração é carregada só por quem a abre.
+const AdminRoutes = lazy(() =>
+  import('../features/admin/AdminRoutes').then((m) => ({ default: m.AdminRoutes })),
+);
+
 // A página de design existe só no desenvolvimento: no build de produção esta linha some
 // junto com o chunk dela.
 const DesignPage = import.meta.env.DEV
@@ -74,6 +79,16 @@ export function AppRoutes() {
       )}
       {/* Compatibilidade com o endereço do sistema anterior. */}
       <Route path="/agent/:slug" element={<Navigate to="/" replace />} />
+      <Route
+        path="/admin/*"
+        element={
+          <RequireAuth>
+            <Suspense fallback={null}>
+              <AdminRoutes />
+            </Suspense>
+          </RequireAuth>
+        }
+      />
       <Route
         path="/chamados"
         element={

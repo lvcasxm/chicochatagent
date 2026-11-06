@@ -284,13 +284,31 @@ describe.skipIf(!TEST_DATABASE_URL)('controle de acesso', () => {
         .map((route) => `${route.method} ${route.url}`)
         .sort();
       expect(protectedRoutes).toEqual([
+        'DELETE /api/admin/categories/:id',
         'DELETE /api/conversations/:id',
+        'GET /api/admin/audit',
+        'GET /api/admin/categories',
+        'GET /api/admin/conversations',
+        'GET /api/admin/conversations/:id',
+        'GET /api/admin/export/:type',
+        'GET /api/admin/instructions',
+        'GET /api/admin/instructions/versions/:version',
+        'GET /api/admin/metrics',
+        'GET /api/admin/prompt',
+        'GET /api/admin/users',
         'GET /api/bootstrap',
         'GET /api/conversations',
         'GET /api/conversations/:id',
         'GET /api/me',
         'GET /api/tickets/mine',
         'GET /api/transcripts/:token',
+        'PATCH /api/admin/users/:id/role',
+        'POST /api/admin/categories',
+        'POST /api/admin/insights',
+        'POST /api/admin/instructions/:version/restore',
+        'POST /api/admin/instructions/draft/publish',
+        'POST /api/admin/instructions/draft/rehearse',
+        'POST /api/admin/instructions/propose',
         'POST /api/auth/logout',
         'POST /api/conversations',
         'POST /api/conversations/:id/feedback',
@@ -298,6 +316,8 @@ describe.skipIf(!TEST_DATABASE_URL)('controle de acesso', () => {
         'POST /api/conversations/:id/ticket-check',
         'POST /api/conversations/:id/tickets',
         'POST /api/me/privacy-ack',
+        'PUT /api/admin/categories/:id',
+        'PUT /api/admin/instructions/draft',
       ]);
     });
 
@@ -305,11 +325,11 @@ describe.skipIf(!TEST_DATABASE_URL)('controle de acesso', () => {
       const protectedRoutes = realRoutes().filter((route) => !route.public);
       expect(protectedRoutes.length).toBeGreaterThan(0);
       for (const route of protectedRoutes) {
-        const method = route.method === 'POST' ? 'POST' : 'GET';
+        const method = route.method as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
         const response = await app.inject({
           method,
           url: route.url,
-          headers: method === 'POST' ? { origin: ORIGIN } : {},
+          headers: method === 'GET' ? {} : { origin: ORIGIN },
         });
         expect(response.statusCode, `${route.method} ${route.url}`).toBe(401);
       }
@@ -325,6 +345,28 @@ describe.skipIf(!TEST_DATABASE_URL)('controle de acesso', () => {
           headers: method === 'POST' ? { cookie, origin: ORIGIN } : { cookie },
         });
         expect([401, 403], `${route.method} ${route.url}`).not.toContain(response.statusCode);
+      }
+    });
+
+    it('toda rota de administração é só do admin: user e tecnico recebem 403', async () => {
+      const adminRoutes = realRoutes().filter((r) => r.url.startsWith('/api/admin/'));
+      expect(adminRoutes.length).toBeGreaterThan(10);
+      for (const route of adminRoutes) {
+        expect(route.roles, `${route.method} ${route.url}`).toEqual(['admin']);
+        const url = route.url
+          .replace(':id', '3f9a1c52-8d4e-4b7a-9c1e-2a6b5d8e0f13')
+          .replace(':type', 'conversations')
+          .replace(':version', '1');
+        for (const role of ['user', 'tecnico'] as const) {
+          const { cookie } = await cookieFor(role);
+          const method = route.method as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+          const response = await app.inject({
+            method,
+            url,
+            headers: method === 'GET' ? { cookie } : { cookie, origin: ORIGIN },
+          });
+          expect(response.statusCode, `${role}: ${route.method} ${route.url}`).toBe(403);
+        }
       }
     });
 

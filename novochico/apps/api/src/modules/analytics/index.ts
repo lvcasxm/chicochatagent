@@ -1,6 +1,11 @@
 import type { AnalyticsEventType } from '@chicochat/shared';
-import type { DbExecutor } from '../../db/client';
+import type { DbExecutor, OrmClient } from '../../db/client';
 import { analyticsEvents } from '../../db/schema';
+import { createMetricsService } from './metrics';
+import { createAnalyticsReports } from './repository';
+
+export { periodRange } from './metrics';
+export type { MetricsService } from './metrics';
 
 export interface AnalyticsEvent {
   eventType: AnalyticsEventType;
@@ -34,3 +39,8 @@ export function createAnalytics(db: DbExecutor) {
 }
 
 export type AnalyticsService = ReturnType<typeof createAnalytics>;
+
+/** Indicadores do painel de administração (RF-071 a RF-076). */
+export function createMetrics(deps: { orm: OrmClient; now: () => Date }) {
+  return createMetricsService({ reports: createAnalyticsReports(deps.orm), now: deps.now });
+}

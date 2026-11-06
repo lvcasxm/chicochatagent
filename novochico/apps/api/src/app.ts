@@ -13,14 +13,16 @@ import { createGoogleOidcClient, type GoogleOidcClient } from './integrations/go
 import type { LlmClient } from './integrations/gemini/llm';
 import type { GlpiClient } from './integrations/glpi/glpi';
 import type { Logger } from './lib/logger';
-import { createAnalytics } from './modules/analytics';
+import { createAdmin } from './modules/admin';
+import { registerAdminRoutes } from './modules/admin/routes';
+import { createAnalytics, createMetrics } from './modules/analytics';
 import { isSecureOrigin, sessionCookieName } from './modules/auth/cookies';
 import { registerAuthRoutes } from './modules/auth/routes';
 import { createAuthService } from './modules/auth/service';
 import { createSessionService } from './modules/auth/sessions';
-import { createChat, createLlmFromConfig } from './modules/chat';
+import { createChat, createLlmFromConfig, createRehearsal } from './modules/chat';
 import { registerChatRoutes } from './modules/chat/routes';
-import { createContent } from './modules/content';
+import { createContent, createContentAdmin } from './modules/content';
 import { createFeedback } from './modules/feedback';
 import { registerFeedbackRoutes } from './modules/feedback/routes';
 import { createSessionCloser } from './modules/sessions';
@@ -56,6 +58,8 @@ export interface AppDeps {
   llm?: LlmClient | null;
   /** IA do resumo do chamado. Por padrão vem da configuração; os testes passam um duplo. */
   summaryLlm?: LlmClient | null;
+  /** IA do painel (Análise IA e assistente de instruções). Por padrão vem da configuração. */
+  insightsLlm?: LlmClient | null;
   /** GLPI. Por padrão vem da configuração (nulo sem credenciais); os testes passam um fake. */
   glpi?: GlpiClient | null;
   /** Relógio, para os testes controlarem o tempo (expiração de sessão, por exemplo). */
@@ -164,6 +168,25 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
     logger: deps.logger,
   });
   registerFeedbackRoutes(app, { feedback });
+
+  const insightsLlm = deps.insightsLlm !== undefined ? deps.insightsLlm : configuredLlm.insightsLlm;
+  const contentAdmin = createContentAdmin({
+    orm: deps.db.orm,
+    llm: insightsLlm,
+    logger: deps.logger,
+    now,
+  });
+  registerAdminRoutes(app, {
+    admin: createAdmin({ orm: deps.db.orm, content, users, insightsLlm, logger: deps.logger, now }),
+    metrics: createMetrics({ orm: deps.db.orm, now }),
+    instructions: contentAdmin.instructions,
+    categories: contentAdmin.categories,
+    rehearsal: createRehearsal({
+      llm: deps.llm !== undefined ? deps.llm : configuredLlm.llm,
+      logger: deps.logger,
+    }),
+    now,
+  });
 
   // Tarefas periódicas: o `server.ts` as agenda; os testes as chamam direto, com o tempo controlado.
   const closer = createSessionCloser({ conversations, analytics, logger: deps.logger });
