@@ -122,6 +122,8 @@ const envSchema = z
       })
       .default(DEFAULT_IP_PATTERN),
     GEMINI_SUMMARY_MODEL: z.string().min(1).default('gemini-3.1-flash-lite'),
+    // Análise IA e assistente de instruções do painel (PEND-17: validar a disponibilidade).
+    GEMINI_INSIGHTS_MODEL: z.string().min(1).default('gemini-2.5-flash'),
   })
   .superRefine((env, ctx) => {
     if (env.GOOGLE_CLIENT_ID && !env.GOOGLE_CLIENT_SECRET) {
@@ -170,7 +172,13 @@ export interface GoogleConfig {
 
 /** Como o chat fala com a IA. Sem `apiKey`, o chat responde que o serviço está indisponível. */
 export type AiConfig =
-  | { provider: 'gemini'; apiKey: string | undefined; chatModel: string; summaryModel: string }
+  | {
+      provider: 'gemini';
+      apiKey: string | undefined;
+      chatModel: string;
+      summaryModel: string;
+      insightsModel: string;
+    }
   | { provider: 'fake' };
 
 export interface GlpiConfig {
@@ -267,6 +275,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
             apiKey: data.GEMINI_API_KEY,
             chatModel: data.GEMINI_CHAT_MODEL,
             summaryModel: data.GEMINI_SUMMARY_MODEL,
+            insightsModel: data.GEMINI_INSIGHTS_MODEL,
           },
     chatCacheEnabled: data.CHAT_CACHE_ENABLED,
     glpiPortalUrl: data.GLPI_PORTAL_URL ?? null,

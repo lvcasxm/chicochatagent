@@ -107,14 +107,44 @@ function devReply(messages: LlmMessage[]): string {
 export function createDevLlm(options: { chunkDelayMs?: number } = {}): LlmClient {
   const delay = options.chunkDelayMs ?? 20;
   return {
-    // Resumo de chamado de desenvolvimento: formato válido, conteúdo genérico.
-    generateJson: () =>
-      Promise.resolve({
+    // Respostas de desenvolvimento: formato válido, conteúdo genérico. O formato pedido é
+    // reconhecido pelo início do prompt de sistema de cada uso.
+    generateJson: ({ system, user }) => {
+      if (system.startsWith('Você edita o documento')) {
+        const match = /DOCUMENTO ATUAL:\n([\s\S]*)\n\nPEDIDO DO ADMINISTRADOR:\n([\s\S]*)$/.exec(
+          user,
+        );
+        const [, document = '', request = ''] = match ?? [];
+        return Promise.resolve({
+          content: `${document.trimEnd()}\n\n- (Alteração de desenvolvimento) ${request.trim()}`,
+          summary:
+            'Acrescentou ao fim do documento o pedido, sem reescrever (IA de desenvolvimento).',
+          conflicts: [],
+          questions: [],
+        });
+      }
+      if (system.includes('analista de suporte')) {
+        return Promise.resolve({
+          summary: 'Análise de desenvolvimento: os temas abaixo são ilustrativos.',
+          insights: [
+            {
+              tema: 'Impressoras',
+              descricao: 'Pedidos recorrentes sobre impressão (IA de desenvolvimento).',
+              estimativa_conversas: 3,
+              severidade: 'media',
+              exemplos: ['impressora não imprime'],
+              recomendacao: 'Verificar a fila de impressão do setor.',
+            },
+          ],
+        });
+      }
+      return Promise.resolve({
         titulo: 'Solicitação de suporte (resumo de desenvolvimento)',
         descricao: DEV_SUMMARY,
         categoria: 'Suporte técnico geral',
         urgencia: 3,
-      }),
+      });
+    },
     async *streamChat({ messages, signal }): AsyncGenerator<LlmChunk> {
       const reply = devReply(messages);
       // Trechos de 7 caracteres partem os marcadores no meio de propósito.

@@ -8,6 +8,10 @@ import { createResponseCache, disabledCache } from './response-cache';
 import { createChatService } from './service';
 
 export { createLlmFromConfig } from './llm';
+export { ADMIN_BYPASS_BLOCK } from './prompt/fixed-rules';
+export { buildSystemPrompt } from './prompt/build';
+export { createRehearsal } from './rehearsal';
+export type { RehearsalService } from './rehearsal';
 export type { ChatService } from './service';
 
 /** Ponto de entrada do módulo: monta o serviço do chat com o cache escolhido pela configuração. */

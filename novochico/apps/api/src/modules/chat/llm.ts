@@ -12,16 +12,19 @@ export function createLlmFromConfig(ai: AiConfig): {
   llm: LlmClient | null;
   /** IA do resumo do chamado, com modelo próprio; sem fila, pois o resumo tem as próprias tentativas. */
   summaryLlm: LlmClient | null;
+  /** IA do painel (Análise IA e assistente de instruções), com o modelo mais capaz. */
+  insightsLlm: LlmClient | null;
   modelName: string | null;
 } {
   if (ai.provider === 'fake') {
     const dev = createDevLlm();
-    return { llm: dev, summaryLlm: dev, modelName: 'fake' };
+    return { llm: dev, summaryLlm: dev, insightsLlm: dev, modelName: 'fake' };
   }
-  if (!ai.apiKey) return { llm: null, summaryLlm: null, modelName: null };
+  if (!ai.apiKey) return { llm: null, summaryLlm: null, insightsLlm: null, modelName: null };
   return {
     llm: withResilience(createGeminiClient({ apiKey: ai.apiKey, model: ai.chatModel })),
     summaryLlm: createGeminiClient({ apiKey: ai.apiKey, model: ai.summaryModel }),
+    insightsLlm: createGeminiClient({ apiKey: ai.apiKey, model: ai.insightsModel }),
     modelName: ai.chatModel,
   };
 }
