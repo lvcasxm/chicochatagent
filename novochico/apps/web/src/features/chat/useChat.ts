@@ -194,5 +194,13 @@ export function useChat(conversationId: string | null, options: UseChatOptions) 
     return send(lastText);
   }, [lastText, send]);
 
-  return { messages, triage, title, status, failure, send, retry };
+  /** Registra na tela um aviso do sistema (ex.: chamado aberto), igual ao que o servidor gravou. */
+  const appendNotice = useCallback((content: string) => {
+    setMessages((current) => [
+      ...current,
+      { id: `local-notice-${crypto.randomUUID()}`, role: 'notice', content, incomplete: false },
+    ]);
+  }, []);
+
+  return { messages, triage, title, status, failure, send, retry, appendNotice };
 }

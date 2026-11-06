@@ -420,3 +420,24 @@ Detalha as ADR-010, 011, 012 e 020.
   9. **Cliente sem TanStack Query**: a lista de conversas e os atalhos usam `fetch` em hooks próprios. A dependência não se justificou na F4.
   10. A tela inicial não repete o logotipo, já presente no cabeçalho.
 - **Consequências:** o formulário de chamado ainda não existe (F5): a interface mostra o aviso de abertura liberada e o link do portal. O login real e o Gemini real continuam sem verificação até as credenciais entrarem no `.env`.
+
+## ADR-037 — Escolhas da abertura de chamado no GLPI (F5)
+
+Detalha as ADR-012, 013 e 017 e a seção G.
+
+- **Contexto:** a F5 implementou o formulário, o resumo por IA, a duplicidade e o cliente do GLPI. Não há GLPI de teste (ADR-029) e a instância real não foi consultada (PEND-05).
+- **Decisão:**
+  1. **Cliente do GLPI** atrás de uma interface de três operações (buscar solicitante, criar chamado, ligar solicitante). `GLPI_PROVIDER=fake` simula em desenvolvimento e é recusado em produção. Sem credenciais, a API sobe e a abertura responde 503 `GLPI_UNAVAILABLE` com o portal. Credenciais pela metade impedem a partida.
+  2. **Resultado desconhecido** (`unknown`) vale para timeout depois de enviar e para 2xx sem número. Só erros que garantem que nada chegou (conexão recusada, DNS, falha do token) são `failed` com reenvio permitido. Nunca há reenvio automático.
+  3. **Idempotência:** a tentativa nasce `pending` com a chave única da conversa; a mesma chave devolve o resultado gravado (HTTP 200) e, enquanto a primeira corre, responde 409. Depois de falha definitiva, a pessoa usa uma chave nova; depois de falha de rede, a interface reusa a mesma, o que nunca duplica.
+  4. **Resposta HTTP:** 201 só quando o chamado foi criado agora. Falha e resultado desconhecido voltam como 200, com `status` no corpo.
+  5. **Resumo:** o texto do Anexo B é gerado do documento e conferido por teste; saída validada (seis seções na ordem, título até 80, urgência de 1 a 5); três tentativas, depois contingência sem transcrição. O modelo é `GEMINI_SUMMARY_MODEL`, sem fila (o resumo tem as próprias tentativas). `generateJson` passou a fazer parte de `LlmClient`.
+  6. **Duplicidade:** limiares da seção G.6 reproduzidos com teste nos valores exatos. O incidente coletivo conta usuários distintos **excluindo o próprio** e devolve só contagem; nenhum título de outra pessoa sai do servidor. Os chamados parecidos não trazem link, porque o endereço do chamado no portal não está documentado.
+  7. **Corpo estrito:** nome e e-mail do solicitante vêm da sessão; qualquer campo a mais no corpo é recusado.
+  8. **Modo de teste:** só `admin`, sem IA, categoria "Teste", fora de métricas, duplicidade e último setor, sem marcar a conversa como escalada.
+  9. **Último setor** vem da última tentativa real, sem coluna nova.
+  10. **Sem link de transcrição** no texto do chamado: ele depende da F6.
+- **Consequências e riscos:**
+  - **Contrato real não verificado:** o cliente foi testado contra um servidor HTTP falso, não contra o GLPI. Caminho do token, filtro de usuário, `TeamMember` e `request_type` dependem de PEND-05. A primeira abertura real deve ser um chamado de teste, com o responsável presente.
+  - Uma tentativa `pending` abandonada por queda do processo fica pendente para sempre e bloqueia aquela chave (409). A limpeza fica para a F9.
+  - "Meus chamados" ainda não existe (F6): a mensagem do resultado desconhecido o cita, como manda a especificação.

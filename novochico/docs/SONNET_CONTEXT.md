@@ -680,7 +680,10 @@ Toda leitura de ambiente em `apps/api/src/config`, validada por zod na partida. 
 | `GEMINI_API_KEY` | Para o Gemini | — | Só no servidor. Sem ela o chat responde 503 (ADR-036) |
 | `GEMINI_CHAT_MODEL`, `GEMINI_SUMMARY_MODEL` | Não | `gemini-3.1-flash-lite` | Modelo |
 | `GEMINI_INSIGHTS_MODEL` | Não | `gemini-2.5-flash` | `PEND-17` |
-| `GLPI_*` | Sim | Ver G.1 | Chamados |
+| `GLPI_PROVIDER` | Não | `glpi` | `glpi` ou `fake` (só desenvolvimento; recusado em produção) |
+| `GLPI_URL`, `GLPI_CLIENT_ID`, `GLPI_CLIENT_SECRET`, `GLPI_USERNAME`, `GLPI_PASSWORD` | Para o GLPI, juntas | Ver G.1 | Sem elas a abertura fica indisponível (ADR-037) |
+| `GLPI_TOKEN_PATH`, `GLPI_REQUEST_TYPE_ID`, `GLPI_TIMEOUT_MS` | Não | `/api.php/token`, 10, 15000 | Ver G.1 |
+| `GEMINI_SUMMARY_MODEL` | Não | `gemini-3.1-flash-lite` | Modelo do resumo do chamado |
 | `GLPI_PORTAL_URL` | Sim | — | Legado: `https://suporte.pedroleopoldo.mg.gov.br/` |
 | `TICKET_IP_REGEX` | Não | `^\d{2}\.\d\.\d\.\d{2,3}$` | `PEND-13` |
 | `CHAT_CACHE_ENABLED` | Não | `true` | Cache |

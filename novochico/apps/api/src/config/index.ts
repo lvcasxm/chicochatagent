@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEFAULT_IP_PATTERN } from '@chicochat/shared';
 
 /**
  * Único ponto da API que lê variáveis de ambiente (regra de lint em eslint.config.js).
@@ -96,6 +97,31 @@ const envSchema = z
       .transform((value) => value === 'true'),
     // Portal de chamados do GLPI, oferecido quando a IA falha e na tela inicial (RF-027, RF-029).
     GLPI_PORTAL_URL: z.string().refine(isHttpUrl).optional(),
+
+    // 'glpi' abre chamados de verdade (exige as credenciais abaixo); 'fake' simula, só em
+    // desenvolvimento e recusado em produção. Sem credenciais, a abertura fica indisponível.
+    GLPI_PROVIDER: z.enum(['glpi', 'fake']).default('glpi'),
+    GLPI_URL: z.string().refine(isHttpUrl).optional(),
+    GLPI_TOKEN_PATH: z.string().startsWith('/').default('/api.php/token'),
+    GLPI_CLIENT_ID: z.string().min(1).optional(),
+    GLPI_CLIENT_SECRET: z.string().min(1).optional(),
+    GLPI_USERNAME: z.string().min(1).optional(),
+    GLPI_PASSWORD: z.string().min(1).optional(),
+    GLPI_REQUEST_TYPE_ID: z.coerce.number().int().positive().default(10),
+    GLPI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(15_000),
+    // Formato do IP das máquinas (PEND-13). Padrão: o do sistema anterior.
+    TICKET_IP_REGEX: z
+      .string()
+      .refine((value) => {
+        try {
+          new RegExp(value);
+          return true;
+        } catch {
+          return false;
+        }
+      })
+      .default(DEFAULT_IP_PATTERN),
+    GEMINI_SUMMARY_MODEL: z.string().min(1).default('gemini-3.1-flash-lite'),
   })
   .superRefine((env, ctx) => {
     if (env.GOOGLE_CLIENT_ID && !env.GOOGLE_CLIENT_SECRET) {
@@ -104,7 +130,26 @@ const envSchema = z
     if (env.GOOGLE_CLIENT_SECRET && !env.GOOGLE_CLIENT_ID) {
       ctx.addIssue({ code: 'custom', path: ['GOOGLE_CLIENT_ID'], message: 'ausente' });
     }
+    const glpiVars = [
+      'GLPI_URL',
+      'GLPI_CLIENT_ID',
+      'GLPI_CLIENT_SECRET',
+      'GLPI_USERNAME',
+      'GLPI_PASSWORD',
+    ] as const;
+    const glpiSet = glpiVars.filter((name) => env[name] !== undefined);
+    // Credenciais pela metade são quase sempre um erro de digitação: a API não sobe assim.
+    if (glpiSet.length > 0 && glpiSet.length < glpiVars.length) {
+      for (const name of glpiVars) {
+        if (env[name] === undefined) {
+          ctx.addIssue({ code: 'custom', path: [name], message: 'ausente' });
+        }
+      }
+    }
     if (env.NODE_ENV === 'production') {
+      if (env.GLPI_PROVIDER === 'fake') {
+        ctx.addIssue({ code: 'custom', path: ['GLPI_PROVIDER'], message: 'fake em produção' });
+      }
       if (env.AI_PROVIDER === 'fake') {
         ctx.addIssue({ code: 'custom', path: ['AI_PROVIDER'], message: 'fake em produção' });
       }
@@ -125,7 +170,22 @@ export interface GoogleConfig {
 
 /** Como o chat fala com a IA. Sem `apiKey`, o chat responde que o serviço está indisponível. */
 export type AiConfig =
-  { provider: 'gemini'; apiKey: string | undefined; chatModel: string } | { provider: 'fake' };
+  | { provider: 'gemini'; apiKey: string | undefined; chatModel: string; summaryModel: string }
+  | { provider: 'fake' };
+
+export interface GlpiConfig {
+  url: string;
+  tokenPath: string;
+  clientId: string;
+  clientSecret: string;
+  username: string;
+  password: string;
+  requestTypeId: number;
+  timeoutMs: number;
+}
+
+/** Como o sistema fala com o GLPI. `null`: sem credenciais, a abertura de chamado fica indisponível. */
+export type GlpiSetting = { provider: 'glpi'; config: GlpiConfig } | { provider: 'fake' } | null;
 
 export type Config = {
   env: 'development' | 'test' | 'production';
@@ -145,6 +205,9 @@ export type Config = {
   chatCacheEnabled: boolean;
   /** Portal de chamados do GLPI; nulo quando não configurado. */
   glpiPortalUrl: string | null;
+  glpi: GlpiSetting;
+  /** Formato aceito para o IP da máquina no chamado. */
+  ticketIpRegex: string;
 };
 
 export class ConfigError extends Error {
@@ -199,9 +262,37 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     ai:
       data.AI_PROVIDER === 'fake'
         ? { provider: 'fake' }
-        : { provider: 'gemini', apiKey: data.GEMINI_API_KEY, chatModel: data.GEMINI_CHAT_MODEL },
+        : {
+            provider: 'gemini',
+            apiKey: data.GEMINI_API_KEY,
+            chatModel: data.GEMINI_CHAT_MODEL,
+            summaryModel: data.GEMINI_SUMMARY_MODEL,
+          },
     chatCacheEnabled: data.CHAT_CACHE_ENABLED,
     glpiPortalUrl: data.GLPI_PORTAL_URL ?? null,
+    glpi:
+      data.GLPI_PROVIDER === 'fake'
+        ? { provider: 'fake' }
+        : data.GLPI_URL &&
+            data.GLPI_CLIENT_ID &&
+            data.GLPI_CLIENT_SECRET &&
+            data.GLPI_USERNAME &&
+            data.GLPI_PASSWORD
+          ? {
+              provider: 'glpi',
+              config: {
+                url: data.GLPI_URL.replace(/\/+$/, ''),
+                tokenPath: data.GLPI_TOKEN_PATH,
+                clientId: data.GLPI_CLIENT_ID,
+                clientSecret: data.GLPI_CLIENT_SECRET,
+                username: data.GLPI_USERNAME,
+                password: data.GLPI_PASSWORD,
+                requestTypeId: data.GLPI_REQUEST_TYPE_ID,
+                timeoutMs: data.GLPI_TIMEOUT_MS,
+              },
+            }
+          : null,
+    ticketIpRegex: data.TICKET_IP_REGEX,
   };
 }
 

@@ -5,7 +5,12 @@ import type { ContentService } from './service';
 
 export function registerContentRoutes(
   app: FastifyInstance,
-  deps: { content: ContentService; glpiPortalUrl: string | null },
+  deps: {
+    content: ContentService;
+    glpiPortalUrl: string | null;
+    /** Último setor do usuário em um chamado, para pré-preencher o formulário. */
+    lastSector: (userId: string) => Promise<string | null>;
+  },
 ): void {
   /** O que a tela inicial precisa, em uma chamada: cards ativos, portal e se há modo de teste. */
   app.get(
@@ -17,6 +22,7 @@ export function registerContentRoutes(
         cards: await deps.content.listHomeCards(),
         glpiPortalUrl: deps.glpiPortalUrl,
         canUseTestMode: user.role === 'admin',
+        lastSector: await deps.lastSector(user.id),
       };
     },
   );

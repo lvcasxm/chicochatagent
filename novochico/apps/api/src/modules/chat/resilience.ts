@@ -140,6 +140,9 @@ export function withResilience(inner: LlmClient, options: ResilienceOptions = {}
   const semaphore = createSemaphore(maxConcurrent, queueWaitMs);
 
   return {
+    // Resposta estruturada não passa pela fila: quem pede (o resumo) tem as próprias tentativas.
+    generateJson: (input) => inner.generateJson(input),
+
     async *streamChat(input): AsyncGenerator<LlmChunk> {
       // Disjuntor aberto: falha na hora, sem gastar a vaga nem a paciência do usuário.
       if (breaker.isOpen()) throw new LlmError('unavailable', { retryable: false });

@@ -76,7 +76,7 @@ function mockApi(routes: Record<string, Handler>) {
   const defaults: Record<string, Handler> = {
     'GET /api/me': () => json(200, ME),
     'GET /api/bootstrap': () =>
-      json(200, { cards: CARDS, glpiPortalUrl: PORTAL, canUseTestMode: false }),
+      json(200, { cards: CARDS, glpiPortalUrl: PORTAL, canUseTestMode: false, lastSector: null }),
     'GET /api/conversations': () => json(200, { conversations: [] }),
   };
   vi.stubGlobal(
@@ -330,9 +330,7 @@ describe('conversa', () => {
     });
     renderChat(`/c/${CONVERSATION_ID}`);
     expect(await screen.findByText('Abertura de chamado liberada')).toBeTruthy();
-    expect(
-      screen.getAllByRole('link', { name: /portal de chamados/i })[0]?.getAttribute('href'),
-    ).toBe(PORTAL);
+    expect(screen.getAllByRole('link', { name: /portal/i })[0]?.getAttribute('href')).toBe(PORTAL);
   });
 
   it('o evento ticket_form libera o aviso durante a conversa', async () => {
@@ -364,7 +362,7 @@ describe('conversa', () => {
     expect(alert.textContent).toContain('Serviço de IA indisponível no momento.');
     expect(
       within(alert)
-        .getByRole('link', { name: /portal de chamados/i })
+        .getByRole('link', { name: /portal/i })
         .getAttribute('href'),
     ).toBe(PORTAL);
     expect(alert.textContent).not.toMatch(/gemini|google|provedor|crédito/i);

@@ -21,12 +21,29 @@ export type ScriptedTurn =
   /** Um trecho de cada vez, à mão do teste (para cancelamento e concorrência). */
   | ((signal: AbortSignal) => AsyncIterable<string>);
 
+/** Resposta estruturada do roteiro: o JSON, ou uma falha. */
+export type ScriptedJson = unknown;
+
+export interface JsonCall {
+  system: string;
+  user: string;
+}
+
 /** Responde com o roteiro, um item por chamada, e guarda as chamadas para o teste conferir. */
-export function createScriptedLlm(script: ScriptedTurn[]) {
+export function createScriptedLlm(script: ScriptedTurn[], jsonScript: ScriptedJson[] = []) {
   const calls: LlmCall[] = [];
+  const jsonCalls: JsonCall[] = [];
   let index = 0;
+  let jsonIndex = 0;
 
   const client: LlmClient = {
+    generateJson({ system, user }) {
+      jsonCalls.push({ system, user });
+      if (jsonIndex >= jsonScript.length)
+        return Promise.reject(new Error('O roteiro JSON do fake acabou'));
+      const item = jsonScript[jsonIndex++];
+      return item instanceof LlmError ? Promise.reject(item) : Promise.resolve(item);
+    },
     async *streamChat({ system, messages, signal }): AsyncGenerator<LlmChunk> {
       calls.push({ system, messages: messages.map((m) => ({ ...m })) });
       const turn = script[index++];
@@ -48,7 +65,7 @@ export function createScriptedLlm(script: ScriptedTurn[]) {
     },
   };
 
-  return { client, calls, remaining: () => script.length - index };
+  return { client, calls, jsonCalls, remaining: () => script.length - index };
 }
 
 const sleep = (ms: number, signal: AbortSignal) =>
@@ -90,6 +107,14 @@ function devReply(messages: LlmMessage[]): string {
 export function createDevLlm(options: { chunkDelayMs?: number } = {}): LlmClient {
   const delay = options.chunkDelayMs ?? 20;
   return {
+    // Resumo de chamado de desenvolvimento: formato válido, conteúdo genérico.
+    generateJson: () =>
+      Promise.resolve({
+        titulo: 'Solicitação de suporte (resumo de desenvolvimento)',
+        descricao: DEV_SUMMARY,
+        categoria: 'Suporte técnico geral',
+        urgencia: 3,
+      }),
     async *streamChat({ messages, signal }): AsyncGenerator<LlmChunk> {
       const reply = devReply(messages);
       // Trechos de 7 caracteres partem os marcadores no meio de propósito.
@@ -102,3 +127,21 @@ export function createDevLlm(options: { chunkDelayMs?: number } = {}): LlmClient
     },
   };
 }
+
+const DEV_SUMMARY = `Problema identificado:
+Problema relatado no atendimento de desenvolvimento.
+
+Contexto:
+Escopo não confirmado pelo usuário.
+
+Comportamento observado:
+Sem detalhes (IA de desenvolvimento).
+
+Tentativas já realizadas:
+Nenhuma tentativa prévia informada.
+
+Impacto operacional:
+Impacto não detalhado pelo usuário; assumir impacto sobre as atividades do setor informado.
+
+Ação esperada:
+Realizar diagnóstico técnico.`;

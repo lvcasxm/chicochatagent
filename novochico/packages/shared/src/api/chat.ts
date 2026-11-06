@@ -76,6 +76,8 @@ export const bootstrapResponseSchema = z.object({
   glpiPortalUrl: z.string().nullable(),
   /** O administrador pode usar o atalho de chamado de teste. */
   canUseTestMode: z.boolean(),
+  /** Último setor usado em um chamado, para pré-preencher o formulário (RF-032). */
+  lastSector: z.string().nullable(),
 });
 export type BootstrapResponse = z.infer<typeof bootstrapResponseSchema>;
 

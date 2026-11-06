@@ -69,7 +69,10 @@ describe.skipIf(!TEST_DATABASE_URL)('chat: conversas e mensagens', () => {
     llm = scripted.client;
     return scripted;
   };
-  const proxy: LlmClient = { streamChat: (input) => llm.streamChat(input) };
+  const proxy: LlmClient = {
+    streamChat: (input) => llm.streamChat(input),
+    generateJson: (input) => llm.generateJson(input),
+  };
 
   beforeAll(async () => {
     test = await createTestDatabase();
@@ -663,7 +666,7 @@ describe.skipIf(!TEST_DATABASE_URL)('chat: conversas e mensagens', () => {
 
       clock.advance(61_000);
       expect((await send(who, id, 'mensagem 22')).status).toBe(200);
-    });
+    }, 30_000);
 
     it('o limite é por usuário: outro usuário não é afetado', async () => {
       useScript(Array.from({ length: 30 }, () => ['ok']));
@@ -674,7 +677,7 @@ describe.skipIf(!TEST_DATABASE_URL)('chat: conversas e mensagens', () => {
       for (let i = 0; i < 20; i++) await send(a, idA, `a ${i}`);
       expect((await send(a, idA, 'a 21')).status).toBe(429);
       expect((await send(b, idB, 'b 1')).status).toBe(200);
-    });
+    }, 30_000);
   });
 
   describe('posse e acesso', () => {

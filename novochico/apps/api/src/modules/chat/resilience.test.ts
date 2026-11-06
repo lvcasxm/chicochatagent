@@ -14,6 +14,7 @@ async function collect(stream: AsyncIterable<LlmChunk>): Promise<string> {
 function clientWith(behaviors: Array<(signal: AbortSignal) => AsyncGenerator<LlmChunk>>) {
   let calls = 0;
   const client: LlmClient = {
+    generateJson: () => Promise.reject(new Error('não usado')),
     streamChat: ({ signal }) => {
       const behavior = behaviors[calls++] ?? behaviors.at(-1);
       if (!behavior) throw new Error('sem comportamento');

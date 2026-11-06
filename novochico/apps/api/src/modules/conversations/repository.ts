@@ -11,6 +11,7 @@ export type ConversationPatch = Partial<
   Pick<
     ConversationRow,
     | 'title'
+    | 'sector'
     | 'attendanceSessionId'
     | 'resolutionAttempts'
     | 'issuePersists'

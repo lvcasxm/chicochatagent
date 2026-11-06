@@ -1,3 +1,4 @@
+import { DEFAULT_IP_PATTERN } from '@chicochat/shared';
 import { describe, expect, it } from 'vitest';
 import { ConfigError, loadConfig } from './index';
 
@@ -34,9 +35,16 @@ describe('loadConfig', () => {
       sessionSecret: SESSION_SECRET,
       allowedEmailDomains: ['prefeitura.example.test'],
       google: null,
-      ai: { provider: 'gemini', apiKey: undefined, chatModel: 'gemini-3.1-flash-lite' },
+      ai: {
+        provider: 'gemini',
+        apiKey: undefined,
+        chatModel: 'gemini-3.1-flash-lite',
+        summaryModel: 'gemini-3.1-flash-lite',
+      },
       chatCacheEnabled: true,
       glpiPortalUrl: null,
+      glpi: null,
+      ticketIpRegex: DEFAULT_IP_PATTERN,
     });
   });
 
@@ -52,6 +60,7 @@ describe('loadConfig', () => {
       provider: 'gemini',
       apiKey: 'chave-ficticia',
       chatModel: 'modelo-x',
+      summaryModel: 'gemini-3.1-flash-lite',
     });
     expect(config.chatCacheEnabled).toBe(false);
     expect(config.glpiPortalUrl).toBe('https://chamados.example.test/');

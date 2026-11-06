@@ -16,6 +16,7 @@ import type {
 const HISTORY_LIMIT = 16;
 const HISTORY_MESSAGE_MAX_LENGTH = 2000;
 const LIST_LIMIT = 100;
+const TRANSCRIPT_LIMIT = 60;
 
 export type { ConversationRow, MessageRow };
 
@@ -119,6 +120,18 @@ export function createConversationsService(deps: {
             (row.role === 'user' || row.role === 'assistant') && !row.incomplete,
         )
         .slice(-HISTORY_LIMIT)
+        .map((row) => ({ role: row.role, content: clip(row.content, HISTORY_MESSAGE_MAX_LENGTH) }));
+    },
+
+    /** A conversa para o resumo do chamado: user e assistant completas, as 60 últimas, cada uma limitada. */
+    async transcript(id: string): Promise<HistoryMessage[]> {
+      const rows = await repository.lastMessages(id, TRANSCRIPT_LIMIT * 2);
+      return rows
+        .filter(
+          (row): row is MessageRow & { role: 'user' | 'assistant' } =>
+            (row.role === 'user' || row.role === 'assistant') && !row.incomplete,
+        )
+        .slice(-TRANSCRIPT_LIMIT)
         .map((row) => ({ role: row.role, content: clip(row.content, HISTORY_MESSAGE_MAX_LENGTH) }));
     },
 

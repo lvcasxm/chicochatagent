@@ -21,6 +21,11 @@ export interface LlmClient {
     messages: LlmMessage[];
     signal: AbortSignal;
   }): AsyncIterable<LlmChunk>;
+  /**
+   * Resposta estruturada (resumo do chamado). Devolve o JSON já lido, **sem validar o formato**:
+   * quem pede valida com o próprio esquema. Falha de rede, de limite ou de JSON vira `LlmError`.
+   */
+  generateJson(input: { system: string; user: string; signal: AbortSignal }): Promise<unknown>;
 }
 
 export type LlmErrorKind =

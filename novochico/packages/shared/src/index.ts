@@ -8,3 +8,5 @@ export * from './domain/roles';
 export * from './domain/ticket';
 export * from './api/chat';
 export * from './domain/category-suggester';
+export * from './api/tickets';
+export * from './domain/sectors';

@@ -1,4 +1,5 @@
 import { Writable } from 'node:stream';
+import { DEFAULT_IP_PATTERN } from '@chicochat/shared';
 import type { Config } from '../src/config';
 import type { Database, OrmClient } from '../src/db/client';
 import { buildLogger } from '../src/lib/logger';
@@ -18,6 +19,8 @@ export const testConfig: Config = {
   ai: { provider: 'fake' },
   chatCacheEnabled: true,
   glpiPortalUrl: 'https://chamados.example.test/',
+  glpi: { provider: 'fake' },
+  ticketIpRegex: DEFAULT_IP_PATTERN,
 };
 
 /** Logger real do projeto, gravando em memória para que os testes inspecionem a saída. */
