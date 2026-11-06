@@ -281,7 +281,7 @@ Padrões: `id uuid` com `gen_random_uuid()`; `created_at timestamptz not null de
 **users**
 | Campo | Tipo | Regras |
 |---|---|---|
-| email | `citext` | Único, obrigatório |
+| email | text | Único, obrigatório, sempre em minúsculas (`CHECK`; ADR-033) |
 | full_name | text | Obrigatório |
 | role | enum `user`,`tecnico`,`admin` | Padrão `user` |
 | default_sector | text | Nulo |

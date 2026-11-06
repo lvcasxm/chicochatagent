@@ -23,6 +23,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
   DATABASE_URL: z.string().refine(isPostgresUrl),
+  // Usuário com direito de alterar o schema, usado só por `npm run db:migrate`. Opcional.
+  DATABASE_MIGRATION_URL: z.string().refine(isPostgresUrl).optional(),
 });
 
 export type Config = {
@@ -31,6 +33,7 @@ export type Config = {
   port: number;
   logLevel: (typeof LOG_LEVELS)[number];
   databaseUrl: string;
+  databaseMigrationUrl: string | undefined;
 };
 
 export class ConfigError extends Error {
@@ -69,6 +72,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     port: data.PORT,
     logLevel: data.LOG_LEVEL,
     databaseUrl: data.DATABASE_URL,
+    databaseMigrationUrl: data.DATABASE_MIGRATION_URL,
   };
 }
 

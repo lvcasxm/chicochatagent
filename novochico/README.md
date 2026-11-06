@@ -10,8 +10,12 @@ Requisitos: Node.js 26 (veja `.nvmrc`), npm e Docker.
 npm install
 cp .env.example .env     # valores fictícios, só para desenvolvimento
 npm run db:up            # PostgreSQL em 127.0.0.1:5433
+npm run db:migrate       # cria as tabelas
+npm run db:seed          # cards e instruções iniciais (seguro para repetir)
 npm run dev              # API em :3100 e web em :5173
 ```
+
+Para alterar o schema, edite `apps/api/src/db/schema/` e rode `npm run db:generate`; revise o SQL gerado antes de aplicar.
 
 Abra http://127.0.0.1:5173 e a página mostra o estado da API e do banco.
 

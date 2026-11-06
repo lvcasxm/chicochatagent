@@ -17,7 +17,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "db:generate": "npm run db:generate -w @chicochat/api",
+    "db:migrate": "npm run db:migrate -w @chicochat/api",
+    "db:seed": "npm run db:seed -w @chicochat/api"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -336,3 +336,23 @@ Decisões pequenas e reversíveis tomadas na implementação da F0.
 - **Consequências:**
   - A F10 precisa de um passo de build para produção. Hoje a API só executa com `tsx`, que não deve ser o servidor de produção.
   - O encerramento gracioso (`SIGTERM`) está implementado, mas não foi verificado no Windows, onde os sinais se comportam de outro modo. Verifique em Linux na F10.
+
+## ADR-033 — Escolhas de modelagem da F1
+
+Decisões pequenas e reversíveis tomadas ao implementar o banco.
+
+- **Contexto:** a seção F do `SONNET_CONTEXT.md` deixava alguns detalhes em aberto, e a implementação mostrou três ajustes.
+- **Decisão:**
+  1. **E-mail sem `citext`:** `users.email` é `text`, com `CHECK (email = lower(email))` e índice único. Evita depender de uma extensão do PostgreSQL no servidor da Prefeitura (`PEND-08`); a aplicação normaliza o e-mail para minúsculas antes de gravar.
+  2. **Enums do banco vêm de `@chicochat/shared`**, a mesma fonte usada por API e web. Acrescentar um valor exige uma nova migration.
+  3. **Restrições além das listadas na seção F**, todas defensivas: aviso de privacidade com data e versão juntas; mensagem do usuário sem `source`; sucesso de chamado exige `glpi_ticket_id`; card de link externo exige URL; versão publicada exige `published_at`; conteúdo de instruções sem `<<`; tentativas de resolução não negativas.
+  4. **Migrations aplicadas por código** (`npm run db:migrate`, migrador do Drizzle), nunca automaticamente na partida da API, usando `DATABASE_MIGRATION_URL` (opcional) para separar o usuário que altera o schema do usuário da aplicação.
+  5. **Seed não destrutivo:** insere só o que falta (`ON CONFLICT DO NOTHING`) e só cria a versão 1 das instruções se não existir nenhuma versão. Repetir o seed nunca desfaz uma edição feita pelo painel.
+  6. **`audit_log` sem bloqueio de `UPDATE`/`DELETE` no banco.** "Só inserção" é regra de aplicação. O reforço correto é revogar esses privilégios do usuário da aplicação, o que depende da definição de usuários do banco (`PEND-08`) e da retenção (`PEND-07`).
+  7. **O card oculto `access`** do Anexo C permanece como linha de `categories`, sem uso até agora. Se continuar sem função, pode ser removido.
+  8. **Ordem dos cards:** a ordem de exibição é proposta, pois o legado dependia da ordem de criação no banco. Só SEI e "Outra coisa?" ficam por último, como antes.
+- **Justificativa:** manter o banco portátil, tornar as regras de integridade verificáveis pelo próprio PostgreSQL e proteger o conteúdo editado.
+- **Alternativas:** `citext` (mais simples, porém exige extensão); migrar automaticamente na partida (arrisca alterar o banco de produção sem controle); `upsert` no seed (sobrescreveria edições).
+- **Consequências:**
+  - Números em `CHECK` e em `WHERE` de índice precisam passar por `lit()`; sem isso o Drizzle gera parâmetros (`$1`), inválidos em DDL. Um teste de migração em banco limpo protege contra isso.
+  - O documento inicial das instruções é uma transposição que precisa de revisão da SATD antes de ir para produção; o resumo da versão 1 lista os pontos pendentes.

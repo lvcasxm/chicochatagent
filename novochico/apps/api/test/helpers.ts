@@ -1,6 +1,6 @@
 import { Writable } from 'node:stream';
 import type { Config } from '../src/config';
-import type { Database } from '../src/db/client';
+import type { Database, OrmClient } from '../src/db/client';
 import { buildLogger } from '../src/lib/logger';
 
 export const testConfig: Config = {
@@ -9,6 +9,7 @@ export const testConfig: Config = {
   port: 0,
   logLevel: 'info',
   databaseUrl: 'postgres://usuario:senha-ficticia@127.0.0.1:1/teste',
+  databaseMigrationUrl: undefined,
 };
 
 /** Logger real do projeto, gravando em memória para que os testes inspecionem a saída. */
@@ -26,6 +27,16 @@ export function captureLogger() {
   };
 }
 
+/** Falha alto se algum teste de unidade tentar usar o ORM de verdade. */
+const unavailableOrm = new Proxy(
+  {},
+  {
+    get() {
+      throw new Error('O ORM não está disponível neste teste; use um banco real.');
+    },
+  },
+) as OrmClient;
+
 export function fakeDb(ping: () => Promise<void>): Database {
-  return { ping, close: () => Promise.resolve() };
+  return { orm: unavailableOrm, ping, close: () => Promise.resolve() };
 }
