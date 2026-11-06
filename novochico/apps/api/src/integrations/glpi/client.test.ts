@@ -310,6 +310,87 @@ describe('cliente HTTP do GLPI (contra um servidor falso)', () => {
     });
   });
 
+  describe('leitura de chamados', () => {
+    const item = (overrides: Record<string, unknown> = {}) => ({
+      id: 7,
+      name: 'Impressora offline',
+      status: { id: 2 },
+      date: '2026-03-02 09:00:00',
+      date_mod: '2026-03-02 10:00:00',
+      urgency: 4,
+      content: '&lt;p&gt;texto&lt;/p&gt;',
+      ...overrides,
+    });
+
+    it('lista pelo solicitante, do mais recente ao mais antigo, no máximo 50', async () => {
+      handler = (_r, res) => json(res, 200, { data: [item()] });
+      const tickets = await client().listTickets(42);
+      const url = new URL(apiCalls()[0]?.url ?? '', 'http://x');
+      expect(url.pathname).toBe('/api.php/Assistance/Ticket');
+      expect(url.searchParams.get('filter')).toBe('user_recipient.id==42');
+      expect(url.searchParams.get('sort')).toBe('date_mod:desc');
+      expect(url.searchParams.get('limit')).toBe('50');
+      expect(tickets).toEqual([
+        {
+          id: '7',
+          title: 'Impressora offline',
+          statusId: 2,
+          createdAt: '2026-03-02 09:00:00',
+          updatedAt: '2026-03-02 10:00:00',
+          urgency: 4,
+          content: '&lt;p&gt;texto&lt;/p&gt;',
+        },
+      ]);
+    });
+
+    it.each([
+      ['data', { data: [item()] }],
+      ['data.items', { data: { items: [item()] } }],
+      ['data.data', { data: { data: [item()] } }],
+      ['lista na raiz', [item()]],
+    ])('aceita a lista em %s', async (_name, body) => {
+      handler = (_r, res) => json(res, 200, body);
+      expect(await client().listTickets(1)).toHaveLength(1);
+    });
+
+    it('aceita status como número, data de criação alternativa e ignora itens sem id', async () => {
+      handler = (_r, res) =>
+        json(res, 200, {
+          data: [
+            item({ id: '9', status: 5, date: undefined, date_creation: '2026-03-01 08:00:00' }),
+            { name: 'sem id' },
+            item({ id: 'x' }),
+          ],
+        });
+      const tickets = await client().listTickets(1);
+      expect(tickets).toHaveLength(1);
+      expect(tickets[0]).toMatchObject({ id: '9', statusId: 5, createdAt: '2026-03-01 08:00:00' });
+    });
+
+    it.each([
+      [401, 'GLPI_AUTH'],
+      [500, 'GLPI_SERVER'],
+    ])('listagem com HTTP %i vira %s', async (status, code) => {
+      handler = (_r, res) => json(res, status, {});
+      expect((await failure(client().listTickets(1)))?.code).toBe(code);
+    });
+
+    it('busca um chamado pelo número, com a resposta direta ou dentro de data', async () => {
+      handler = (_r, res) => json(res, 200, item({ id: 55 }));
+      expect((await client().getTicket('55'))?.id).toBe('55');
+      expect(apiCalls()[0]?.url).toBe('/api.php/Assistance/Ticket/55');
+      handler = (_r, res) => json(res, 200, { data: item({ id: 56 }) });
+      expect((await client().getTicket('56'))?.id).toBe('56');
+    });
+
+    it('chamado inexistente (404) devolve nulo; outros erros viram GLPI_*', async () => {
+      handler = (_r, res) => json(res, 404, {});
+      expect(await client().getTicket('1')).toBeNull();
+      handler = (_r, res) => json(res, 500, {});
+      expect((await failure(client().getTicket('1')))?.code).toBe('GLPI_SERVER');
+    });
+  });
+
   describe('solicitante do chamado', () => {
     it('liga o usuário ao chamado como solicitante', async () => {
       handler = (_r, res) => json(res, 200, {});

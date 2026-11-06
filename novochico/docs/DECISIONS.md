@@ -441,3 +441,22 @@ Detalha as ADR-012, 013 e 017 e a seção G.
   - **Contrato real não verificado:** o cliente foi testado contra um servidor HTTP falso, não contra o GLPI. Caminho do token, filtro de usuário, `TeamMember` e `request_type` dependem de PEND-05. A primeira abertura real deve ser um chamado de teste, com o responsável presente.
   - Uma tentativa `pending` abandonada por queda do processo fica pendente para sempre e bloqueia aquela chave (409). A limpeza fica para a F9.
   - "Meus chamados" ainda não existe (F6): a mensagem do resultado desconhecido o cita, como manda a especificação.
+
+## ADR-038 — Meus chamados e transcrição (F6)
+
+Detalha as ADR-016 e 037 e a seção G.7.
+
+- **Contexto:** a F6 lista os chamados do usuário e dá ao técnico o contexto da conversa, sem expor dados.
+- **Decisão:**
+  1. **Listagem** (`GET /api/tickets/mine`): o solicitante é achado pelo e-mail **da sessão**; nada do cliente escolhe de quem são os chamados. Une a lista do GLPI (`user_recipient`, até 50, por atualização) aos números registrados aqui, buscados um a um (5 por vez). O que o GLPI não devolver fica com o registro local.
+  2. **Sem cadastro no GLPI** (`requester_not_found`) e **GLPI fora do ar** (`glpi_unavailable`) têm aviso próprio e mostram o registro local, sem situação nem descrição, em vez de uma lista vazia.
+  3. **Texto plano:** o conteúdo do GLPI passa por `html-to-text` até parar de mudar (decodifica entidades, remove marcas, descarta imagem, script, estilo e endereço de link), tira as marcas de markdown do próprio sistema e limita a 4000 caracteres. A interface desenha como texto, nunca como HTML nem markdown.
+  4. **Datas:** o GLPI manda a hora sem fuso; é tratada como `America/Sao_Paulo` (UTC-3) e a tela formata sempre nesse fuso.
+  5. **Transcrição:** retrato das mensagens `user` e `assistant` no momento da abertura (até 60), gravado antes da chamada ao GLPI para o link entrar no texto do chamado. Token de 256 bits em base64url; só o hash SHA-256 é guardado. Chamado de teste e conversa sem mensagens não geram transcrição. Falha definitiva na abertura apaga o retrato; resultado desconhecido o mantém, porque o chamado pode existir.
+  6. **Acesso** (`GET /api/transcripts/:token`): dono, `tecnico` e `admin`. Token malformado, inexistente ou de outra pessoa recebem o mesmo 404. **Todo** acesso, inclusive o do dono, gera registro de auditoria, só com papel e se é o dono, sem conteúdo. Sem login a tela leva ao login e volta.
+  7. **Dependência nova:** `html-to-text` (e seus tipos), por decodificar entidades e tratar HTML de forma testada.
+- **Consequências e riscos:**
+  - O formato real da resposta do GLPI (campos, status e datas) segue sem verificação (PEND-05). A listagem foi testada contra um servidor falso.
+  - Técnicos sem conta com papel não leem transcrições (PEND-10).
+  - O texto do chamado criado antes da F6 não tem link; o link só existe nos chamados novos.
+  - A tela de "Meus chamados" não tem paginação: são no máximo 50.

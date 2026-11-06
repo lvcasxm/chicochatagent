@@ -289,6 +289,8 @@ describe.skipIf(!TEST_DATABASE_URL)('controle de acesso', () => {
         'GET /api/conversations',
         'GET /api/conversations/:id',
         'GET /api/me',
+        'GET /api/tickets/mine',
+        'GET /api/transcripts/:token',
         'POST /api/auth/logout',
         'POST /api/conversations',
         'POST /api/conversations/:id/messages',
