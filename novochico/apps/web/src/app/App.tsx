@@ -5,7 +5,7 @@ import { Skeleton } from '../components/Skeleton';
 import { ToastProvider } from '../components/Toast';
 import { LoginPage } from '../features/auth/LoginPage';
 import { PrivacyNotice } from '../features/auth/PrivacyNotice';
-import { HomePage } from '../features/home/HomePage';
+import { ChatPage } from '../features/chat/ChatPage';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { AppShell } from './layouts/AppShell';
 import { ThemeProvider } from './theme/ThemeProvider';
@@ -70,11 +70,21 @@ export function AppRoutes() {
           }
         />
       )}
+      {/* Compatibilidade com o endereço do sistema anterior. */}
+      <Route path="/agent/:slug" element={<Navigate to="/" replace />} />
+      <Route
+        path="/c/:conversationId"
+        element={
+          <RequireAuth>
+            <ChatPage />
+          </RequireAuth>
+        }
+      />
       <Route
         path="*"
         element={
           <RequireAuth>
-            <HomePage />
+            <ChatPage />
           </RequireAuth>
         }
       />

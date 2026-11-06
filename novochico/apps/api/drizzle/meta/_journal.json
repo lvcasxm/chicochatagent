@@ -8,6 +8,13 @@
       "when": 1793978320513,
       "tag": "0000_initial_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793982383709,
+      "tag": "0001_conversa_modo_teste",
+      "breakpoints": true
     }
   ]
 }

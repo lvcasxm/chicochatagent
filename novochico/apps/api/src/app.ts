@@ -10,11 +10,18 @@ import { registerErrorHandling } from './http/error-handler';
 import { registerHealthRoute } from './http/health';
 import { registerRouteCatalog } from './http/route-catalog';
 import { createGoogleOidcClient, type GoogleOidcClient } from './integrations/google/oidc';
+import type { LlmClient } from './integrations/gemini/llm';
 import type { Logger } from './lib/logger';
+import { createAnalytics } from './modules/analytics';
 import { isSecureOrigin, sessionCookieName } from './modules/auth/cookies';
 import { registerAuthRoutes } from './modules/auth/routes';
 import { createAuthService } from './modules/auth/service';
 import { createSessionService } from './modules/auth/sessions';
+import { createChat, createLlmFromConfig } from './modules/chat';
+import { registerChatRoutes } from './modules/chat/routes';
+import { createContent } from './modules/content';
+import { registerContentRoutes } from './modules/content/routes';
+import { createConversations } from './modules/conversations';
 import { createUsers } from './modules/users';
 import { registerUsersRoutes } from './modules/users/routes';
 
@@ -27,6 +34,11 @@ export interface AppDeps {
    * credenciais (o login fica indisponível). Os testes passam um provedor local.
    */
   oidc?: GoogleOidcClient | null;
+  /**
+   * IA do chat. Por padrão vem da configuração (Gemini, o fake de desenvolvimento, ou nenhuma
+   * quando falta a chave). Os testes passam um duplo com roteiro.
+   */
+  llm?: LlmClient | null;
   /** Relógio, para os testes controlarem o tempo (expiração de sessão, por exemplo). */
   now?: () => Date;
 }
@@ -87,6 +99,23 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
   registerHealthRoute(app, { db: deps.db });
   registerAuthRoutes(app, { auth, sessions, config });
   registerUsersRoutes(app, { users });
+
+  const conversations = createConversations({ orm: deps.db.orm, now });
+  const content = createContent(deps.db.orm);
+  const configuredLlm = createLlmFromConfig(config.ai);
+  const chat = createChat({
+    orm: deps.db.orm,
+    conversations,
+    content,
+    analytics: createAnalytics(deps.db.orm),
+    llm: deps.llm !== undefined ? deps.llm : configuredLlm.llm,
+    modelName: configuredLlm.modelName,
+    cacheEnabled: config.chatCacheEnabled,
+    logger: deps.logger,
+    now,
+  });
+  registerContentRoutes(app, { content, glpiPortalUrl: config.glpiPortalUrl });
+  registerChatRoutes(app, { chat, conversations });
 
   return app;
 }

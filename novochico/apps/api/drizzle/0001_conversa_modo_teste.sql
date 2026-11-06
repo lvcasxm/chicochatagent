@@ -1,0 +1,1 @@
+ALTER TABLE "conversations" ADD COLUMN "ticket_form_test_mode" boolean DEFAULT false NOT NULL;

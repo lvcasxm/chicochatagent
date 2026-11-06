@@ -23,6 +23,11 @@ function json(status: number, body?: unknown) {
   });
 }
 
+const DEFAULT_ROUTES: Record<string, () => Response> = {
+  'GET /api/bootstrap': () => json(200, { cards: [], glpiPortalUrl: null, canUseTestMode: false }),
+  'GET /api/conversations': () => json(200, { conversations: [] }),
+};
+
 type Handler = (init: RequestInit | undefined) => Response | Promise<Response>;
 
 /** Simula a API por "MÉTODO /caminho" e registra as chamadas feitas. */
@@ -34,7 +39,7 @@ function mockApi(routes: Record<string, Handler>) {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       const key = `${init?.method ?? 'GET'} ${url}`;
       calls.push({ key, body: typeof init?.body === 'string' ? init.body : undefined });
-      const handler = routes[key];
+      const handler = routes[key] ?? DEFAULT_ROUTES[key];
       return Promise.resolve(handler ? handler(init) : json(404, {}));
     }),
   );
@@ -132,7 +137,7 @@ describe('aviso de privacidade', () => {
     expect(dialog.textContent).toContain('Aviso de Privacidade e Segurança');
     expect(dialog.textContent).toContain('senhas');
     expect(dialog.textContent).toContain('dados de cidadãos');
-    expect(screen.queryByText(/Olá, Fulano/)).toBeNull();
+    expect(screen.queryByText(/Como posso te ajudar hoje/)).toBeNull();
   });
 
   it('grava o aceite da versão atual no servidor e libera o sistema', async () => {
@@ -144,7 +149,7 @@ describe('aviso de privacidade', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: /li e concordo/i }));
 
-    expect(await screen.findByText(/Olá, Fulano/)).toBeTruthy();
+    expect(await screen.findByText(/Como posso te ajudar hoje/)).toBeTruthy();
     expect(screen.queryByRole('dialog')).toBeNull();
     const ack = calls.find((call) => call.key === 'POST /api/me/privacy-ack');
     expect(JSON.parse(ack?.body ?? '{}')).toEqual({ version: PRIVACY_NOTICE_VERSION });
@@ -163,10 +168,10 @@ describe('aviso de privacidade', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: /li e concordo/i }));
     expect((await screen.findByRole('alert')).textContent).toContain('Não foi possível registrar');
-    expect(screen.queryByText(/Olá, Fulano/)).toBeNull();
+    expect(screen.queryByText(/Como posso te ajudar hoje/)).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: /li e concordo/i }));
-    expect(await screen.findByText(/Olá, Fulano/)).toBeTruthy();
+    expect(await screen.findByText(/Como posso te ajudar hoje/)).toBeTruthy();
   });
 
   it('desativa o botão enquanto o aceite é enviado, para não enviar duas vezes', async () => {
@@ -186,7 +191,7 @@ describe('aviso de privacidade', () => {
     fireEvent.click(button);
     release();
 
-    await screen.findByText(/Olá, Fulano/);
+    await screen.findByText(/Como posso te ajudar hoje/);
     expect(calls.filter((call) => call.key === 'POST /api/me/privacy-ack')).toHaveLength(1);
   });
 });
@@ -195,13 +200,13 @@ describe('com sessão', () => {
   it('mostra a página inicial com o primeiro nome', async () => {
     mockApi({ 'GET /api/me': () => json(200, ME) });
     renderAt('/');
-    expect(await screen.findByText(/Olá, Fulano\./)).toBeTruthy();
+    expect(await screen.findByText(/Como posso te ajudar hoje/)).toBeTruthy();
   });
 
   it('quem já entrou é levado da tela de login para a página inicial', async () => {
     mockApi({ 'GET /api/me': () => json(200, ME) });
     renderAt('/login?error=failed');
-    expect(await screen.findByText(/Olá, Fulano\./)).toBeTruthy();
+    expect(await screen.findByText(/Como posso te ajudar hoje/)).toBeTruthy();
     expect(screen.queryByRole('link', { name: /entrar com a conta google/i })).toBeNull();
   });
 
@@ -228,7 +233,7 @@ describe('com sessão', () => {
     fireEvent.click(await screen.findByRole('button', { name: /sair/i }));
 
     expect((await screen.findByRole('alert')).textContent).toContain('Não foi possível sair');
-    expect(screen.getByText(/Olá, Fulano\./)).toBeTruthy();
+    expect(screen.getByText(/Como posso te ajudar hoje/)).toBeTruthy();
   });
 });
 
@@ -245,7 +250,7 @@ describe('falhas ao consultar o sistema', () => {
 
     expect((await screen.findByRole('alert')).textContent).toContain('Não foi possível consultar');
     fireEvent.click(screen.getByRole('button', { name: /tentar novamente/i }));
-    expect(await screen.findByText(/Olá, Fulano\./)).toBeTruthy();
+    expect(await screen.findByText(/Como posso te ajudar hoje/)).toBeTruthy();
   });
 
   it('trata uma resposta fora do contrato como erro, em vez de exibir dados quebrados', async () => {

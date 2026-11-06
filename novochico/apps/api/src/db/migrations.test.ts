@@ -55,7 +55,8 @@ describe.skipIf(!TEST_DATABASE_URL)('migrations em banco limpo', () => {
     const result = await test.db.orm.execute<{ total: string }>(
       sql`select count(*)::text as total from drizzle.__drizzle_migrations`,
     );
-    expect(result.rows[0]?.total).toBe('1');
+    // Uma linha por migration existente (0000 e 0001).
+    expect(result.rows[0]?.total).toBe('2');
   });
 
   it('criam os enums com exatamente os valores de @chicochat/shared', async () => {
