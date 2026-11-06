@@ -1,0 +1,21 @@
+# Dependências e builds
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# Segredos: só .env.example é versionado
+.env
+.env.*
+!.env.example
+
+# Repositório público (ADR-031): a auditoria lista falhas do sistema antigo, ainda em produção.
+# Fica só na máquina local enquanto o legado estiver no ar.
+docs/LEGACY_AUDIT.md
+
+# Exportações e arquivos locais
+*.dump
+*.sql.gz
+.DS_Store
+Thumbs.db
