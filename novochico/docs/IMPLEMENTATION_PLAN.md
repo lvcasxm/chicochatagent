@@ -218,6 +218,8 @@ flowchart LR
 
 **Riscos:** técnicos sem conta (`PEND-10`).
 
+**Situação:** implementada com fakes (ADR-038). **Não verificado:** o formato real das respostas do GLPI (PEND-05) e a leitura por técnicos reais (PEND-10).
+
 ---
 
 ## F7 — Avaliação e eventos

@@ -1,16 +1,22 @@
 import {
+  TICKET_STATUS_LABELS,
+  URGENCY_LABELS,
   isValidMachineIp,
+  type MyTicket,
+  type MyTicketsResponse,
   type CreateTicketRequest,
   type CreateTicketResponse,
   type TicketCheckResponse,
   type UserRole,
 } from '@chicochat/shared';
-import { GlpiError, type GlpiClient } from '../../integrations/glpi/glpi';
+import { GlpiError, type GlpiClient, type GlpiTicket } from '../../integrations/glpi/glpi';
+import { parseGlpiDate, toPlainText } from '../../lib/plain-text';
 import type { LlmClient } from '../../integrations/gemini/llm';
 import { AppError } from '../../lib/errors';
 import type { Logger } from '../../lib/logger';
 import type { AnalyticsService } from '../analytics';
 import type { ContentService } from '../content';
+import type { TranscriptsService } from '../transcripts';
 import type { ConversationRow, ConversationsService } from '../conversations';
 import { buildTicketContent } from './description';
 import {
@@ -47,6 +53,49 @@ export const TICKET_MESSAGES = {
 } as const;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const MINE_LIMIT = 50;
+
+/** Executa `fn` sobre os itens com no máximo `limit` chamadas ao mesmo tempo. */
+async function mapWithLimit<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  async function worker() {
+    for (let index = next++; index < items.length; index = next++) {
+      results[index] = await fn(items[index] as T);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
+/** Chamado só com o que o sistema registrou ao abrir (sem status nem descrição do GLPI). */
+function localTicket(attempt: TicketAttemptRow): MyTicket {
+  return {
+    id: attempt.glpiTicketId ?? '',
+    title: attempt.title ?? '',
+    statusLabel: null,
+    createdAt: attempt.createdAt.toISOString(),
+    updatedAt: null,
+    urgencyLabel: attempt.urgency ? (URGENCY_LABELS[attempt.urgency] ?? null) : null,
+    description: null,
+  };
+}
+
+function toMyTicket(ticket: GlpiTicket): MyTicket {
+  return {
+    id: ticket.id,
+    title: ticket.title,
+    statusLabel: ticket.statusId === null ? null : (TICKET_STATUS_LABELS[ticket.statusId] ?? null),
+    createdAt: parseGlpiDate(ticket.createdAt),
+    updatedAt: parseGlpiDate(ticket.updatedAt),
+    urgencyLabel: ticket.urgency === null ? null : (URGENCY_LABELS[ticket.urgency] ?? null),
+    description: toPlainText(ticket.content),
+  };
+}
 const HOUR_MS = 60 * 60 * 1000;
 
 export interface TicketsServiceDeps {
@@ -54,6 +103,9 @@ export interface TicketsServiceDeps {
   conversations: ConversationsService;
   content: ContentService;
   analytics: AnalyticsService;
+  transcripts: TranscriptsService;
+  /** Origem pública, para o link da transcrição no chamado. */
+  appOrigin: string;
   /** Nulo: o GLPI não está configurado e a abertura fica indisponível. */
   glpi: GlpiClient | null;
   /** IA do resumo; nulo ou com falha, o resumo cai na contingência sem IA. */
@@ -96,7 +148,17 @@ function responseFor(attempt: TicketAttemptRow): CreateTicketResponse {
 }
 
 export function createTicketsService(deps: TicketsServiceDeps) {
-  const { repository, conversations, content, analytics, glpi, summaryLlm, logger, now } = deps;
+  const {
+    repository,
+    conversations,
+    content,
+    analytics,
+    transcripts,
+    glpi,
+    summaryLlm,
+    logger,
+    now,
+  } = deps;
 
   async function record(...args: Parameters<AnalyticsService['record']>): Promise<void> {
     try {
@@ -135,6 +197,57 @@ export function createTicketsService(deps: TicketsServiceDeps) {
   return {
     /** Último setor usado, para pré-preencher o formulário (RF-032). */
     lastSector: (userId: string) => repository.lastSector(userId),
+
+    /**
+     * Chamados do usuário (RF-050 a RF-054): os do GLPI em que ele é o solicitante, achado pelo
+     * e-mail **da sessão**, somados aos números que o sistema registrou ao abrir (até 50, por
+     * atualização). Sem cadastro no GLPI ou com o GLPI fora do ar, devolve o que há no registro
+     * local e diz por quê. O conteúdo vira texto plano; nunca HTML nem markdown do GLPI (S-06).
+     */
+    async listMine(actor: Pick<TicketActor, 'id' | 'email'>): Promise<MyTicketsResponse> {
+      const local = await repository.listUserSuccess(actor.id, new Date(0), MINE_LIMIT);
+      const localOnly = (): MyTicket[] =>
+        local.flatMap((attempt) => (attempt.glpiTicketId ? [localTicket(attempt)] : []));
+
+      if (!glpi) return { tickets: localOnly(), notice: 'glpi_unavailable' };
+
+      let requesterId: number | null;
+      try {
+        requesterId = await glpi.findRequesterId(actor.email);
+      } catch (error) {
+        logger.warn({ err: error }, 'Falha ao buscar o solicitante para listar chamados');
+        return { tickets: localOnly(), notice: 'glpi_unavailable' };
+      }
+
+      try {
+        const fromGlpi = requesterId === null ? [] : await glpi.listTickets(requesterId);
+        const known = new Set(fromGlpi.map((ticket) => ticket.id));
+        const missing = local.filter(
+          (attempt) => attempt.glpiTicketId && !known.has(attempt.glpiTicketId),
+        );
+        // Os números registrados aqui que a listagem não trouxe são buscados um a um (até 5 juntos).
+        // Se um deles não vier (GLPI sem o chamado ou com falha), fica o registro local.
+        const extra = await mapWithLimit(missing, 5, async (attempt): Promise<MyTicket> => {
+          try {
+            const found = await glpi.getTicket(attempt.glpiTicketId ?? '');
+            if (found) return toMyTicket(found);
+          } catch (error) {
+            logger.warn({ err: error }, 'Falha ao buscar um chamado no GLPI');
+          }
+          return localTicket(attempt);
+        });
+
+        const tickets = [...fromGlpi.map(toMyTicket), ...extra]
+          .sort((a, b) =>
+            (b.updatedAt ?? b.createdAt ?? '').localeCompare(a.updatedAt ?? a.createdAt ?? ''),
+          )
+          .slice(0, MINE_LIMIT);
+        return { tickets, notice: requesterId === null ? 'requester_not_found' : null };
+      } catch (error) {
+        logger.warn({ err: error }, 'Falha ao listar chamados no GLPI');
+        return { tickets: localOnly(), notice: 'glpi_unavailable' };
+      }
+    },
 
     /**
      * Chamados parecidos e incidente coletivo (RF-036 a RF-038). Nunca bloqueia: falha na
@@ -274,6 +387,28 @@ export function createTicketsService(deps: TicketsServiceDeps) {
           });
       }
 
+      // Retrato da conversa para o técnico, com link que exige login (RF-055, ADR-016). Chamado de
+      // teste e conversa sem mensagens não geram transcrição.
+      let transcriptUrl: string | null = null;
+      let transcriptSaved = false;
+      if (!isTest && transcript.length > 0) {
+        try {
+          const saved = await transcripts.create({
+            ticketAttemptId: attempt.id,
+            title: summary.title,
+            summary: summary.description,
+            requesterName: actor.fullName,
+            sector: request.sector,
+            messages: transcript.map((line) => ({ ...line, at: at.toISOString() })),
+          });
+          transcriptUrl = `${deps.appOrigin}/conversa/${saved.token}`;
+          transcriptSaved = true;
+        } catch (error) {
+          // Sem a transcrição o chamado ainda abre; só não leva o link.
+          logger.warn({ err: error, conversationId }, 'Falha ao gravar a transcrição');
+        }
+      }
+
       const ticketContent = buildTicketContent({
         requesterName: actor.fullName,
         requesterEmail: actor.email,
@@ -285,6 +420,7 @@ export function createTicketsService(deps: TicketsServiceDeps) {
         beneficiaryRegistration: request.beneficiaryRegistration ?? null,
         beneficiarySector: request.beneficiarySector ?? null,
         description: summary.description,
+        transcriptUrl,
       });
 
       // O solicitante é localizado pelo e-mail da sessão; não achar nunca bloqueia (RF-043).
@@ -328,6 +464,12 @@ export function createTicketsService(deps: TicketsServiceDeps) {
           },
           now(),
         );
+        // Falha definitiva: nenhum chamado existe, então o retrato da conversa não fica para trás.
+        if (transcriptSaved && !failure.outcomeUnknown) {
+          await transcripts.remove(attempt.id).catch((removeError: unknown) => {
+            logger.warn({ err: removeError, conversationId }, 'Falha ao remover a transcrição');
+          });
+        }
         if (!isTest) {
           await record({
             eventType: 'ticket_failed',

@@ -50,6 +50,9 @@ export function ConversationList({
         <Plus aria-hidden="true" className="size-5" />
         Nova conversa
       </Link>
+      <Link to="/chamados" className="type-label inline-flex min-h-11 items-center px-2">
+        Meus chamados
+      </Link>
 
       {failed && <Notice tone="warning">Não foi possível carregar a lista de conversas.</Notice>}
 

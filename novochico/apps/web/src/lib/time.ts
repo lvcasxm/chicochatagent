@@ -18,3 +18,15 @@ export function relativeTime(iso: string, now: Date = new Date()): string {
     ageLabel(minutes) ?? then.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
   );
 }
+
+/** Data e hora no fuso de Pedro Leopoldo, qualquer que seja o fuso do aparelho (RF-054). */
+export function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}

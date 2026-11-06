@@ -333,6 +333,7 @@ describe('texto do chamado no GLPI', () => {
     beneficiaryRegistration: null,
     beneficiarySector: null,
     description: SECTIONS_TEXT,
+    transcriptUrl: null,
   };
 
   it('segue o formato da seção G.4', () => {
@@ -350,6 +351,19 @@ describe('texto do chamado no GLPI', () => {
         SECTIONS_TEXT,
       ].join('\n'),
     );
+  });
+
+  it('com transcrição, termina com o link da conversa completa', () => {
+    const text = buildTicketContent({
+      ...base,
+      transcriptUrl: 'https://chico.example.test/conversa/abc',
+    });
+    expect(
+      text.endsWith(
+        '---\n\n**Visualizar conversa completa:** https://chico.example.test/conversa/abc',
+      ),
+    ).toBe(true);
+    expect(buildTicketContent(base)).not.toContain('Visualizar conversa');
   });
 
   it('sem IP, diz que o usuário não tem acesso à máquina', () => {

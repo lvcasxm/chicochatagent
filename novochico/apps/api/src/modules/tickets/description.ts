@@ -12,6 +12,8 @@ export interface TicketContentInput {
   beneficiarySector: string | null;
   /** As seis seções, já validadas. */
   description: string;
+  /** Link da transcrição; nulo em chamado de teste ou sem mensagens. */
+  transcriptUrl: string | null;
 }
 
 /**
@@ -37,5 +39,8 @@ export function buildTicketContent(input: TicketContentInput): string {
   }
 
   lines.push('', '---', '', input.description.trim());
+  if (input.transcriptUrl) {
+    lines.push('', '---', '', `**Visualizar conversa completa:** ${input.transcriptUrl}`);
+  }
   return lines.join('\n');
 }

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   createTicketRequestSchema,
   type CreateTicketResponse,
+  type MyTicketsResponse,
   type TicketCheckResponse,
 } from '@chicochat/shared';
 import { requireAuth } from '../../http/auth';
@@ -26,6 +27,12 @@ export function registerTicketsRoutes(
   deps: { tickets: TicketsService },
 ): void {
   const guarded = { config: { requiresPrivacyAck: true } } as const;
+
+  /** Chamados do usuário logado, achados pelo e-mail da sessão (RF-050). Nada vem do cliente. */
+  app.get('/api/tickets/mine', guarded, async (request): Promise<MyTicketsResponse> => {
+    const { user } = requireAuth(request);
+    return deps.tickets.listMine({ id: user.id, email: user.email });
+  });
 
   app.post(
     '/api/conversations/:id/ticket-check',

@@ -24,6 +24,8 @@ import { createContent } from './modules/content';
 import { registerContentRoutes } from './modules/content/routes';
 import { createConversations } from './modules/conversations';
 import { createGlpiFromConfig, createTickets } from './modules/tickets';
+import { createTranscripts } from './modules/transcripts';
+import { registerTranscriptRoutes } from './modules/transcripts/routes';
 import { registerTicketsRoutes } from './modules/tickets/routes';
 import { createUsers } from './modules/users';
 import { registerUsersRoutes } from './modules/users/routes';
@@ -122,11 +124,14 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
     now,
   });
   const analytics = createAnalytics(deps.db.orm);
+  const transcripts = createTranscripts({ orm: deps.db.orm });
   const tickets = createTickets({
     orm: deps.db.orm,
     conversations,
     content,
     analytics,
+    transcripts,
+    appOrigin: config.appOrigin,
     glpi: deps.glpi !== undefined ? deps.glpi : createGlpiFromConfig(config.glpi),
     summaryLlm: deps.summaryLlm !== undefined ? deps.summaryLlm : configuredLlm.summaryLlm,
     ticketIpRegex: config.ticketIpRegex,
@@ -140,6 +145,7 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
   });
   registerChatRoutes(app, { chat, conversations });
   registerTicketsRoutes(app, { tickets });
+  registerTranscriptRoutes(app, { transcripts });
 
   return app;
 }

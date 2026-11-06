@@ -6,6 +6,8 @@ import { ToastProvider } from '../components/Toast';
 import { LoginPage } from '../features/auth/LoginPage';
 import { PrivacyNotice } from '../features/auth/PrivacyNotice';
 import { ChatPage } from '../features/chat/ChatPage';
+import { MyTicketsPage } from '../features/tickets/MyTicketsPage';
+import { TranscriptPage } from '../features/tickets/TranscriptPage';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { AppShell } from './layouts/AppShell';
 import { ThemeProvider } from './theme/ThemeProvider';
@@ -72,6 +74,22 @@ export function AppRoutes() {
       )}
       {/* Compatibilidade com o endereço do sistema anterior. */}
       <Route path="/agent/:slug" element={<Navigate to="/" replace />} />
+      <Route
+        path="/chamados"
+        element={
+          <RequireAuth>
+            <MyTicketsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/conversa/:token"
+        element={
+          <RequireAuth>
+            <TranscriptPage />
+          </RequireAuth>
+        }
+      />
       <Route
         path="/c/:conversationId"
         element={

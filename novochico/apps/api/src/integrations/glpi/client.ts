@@ -1,5 +1,5 @@
 import type { GlpiConfig } from '../../config';
-import { GlpiError, type GlpiClient, type GlpiTicketInput } from './glpi';
+import { GlpiError, type GlpiClient, type GlpiTicket, type GlpiTicketInput } from './glpi';
 
 export interface GlpiHttpOptions {
   config: GlpiConfig;
@@ -66,6 +66,40 @@ function firstUserId(body: unknown): number | null {
     }
   }
   return null;
+}
+
+/** A lista pode vir na raiz, em `data`, `data.items` ou `data.data` (G.7). */
+function extractList(body: unknown): unknown[] {
+  if (Array.isArray(body)) return body;
+  const data = (body as { data?: unknown } | null)?.data;
+  if (Array.isArray(data)) return data;
+  const inner = data as { items?: unknown; data?: unknown } | null | undefined;
+  if (Array.isArray(inner?.items)) return inner.items as unknown[];
+  if (Array.isArray(inner?.data)) return inner.data as unknown[];
+  return [];
+}
+
+/** O status pode vir como número ou como objeto `{ id }`. */
+function idOf(value: unknown): number | null {
+  return asId(value) ?? asId((value as { id?: unknown } | null)?.id);
+}
+
+const text = (value: unknown): string | null => (typeof value === 'string' ? value : null);
+
+function toTicket(item: unknown): GlpiTicket | null {
+  const raw = item as Record<string, unknown> | null;
+  const id = asId(raw?.id);
+  if (id === null) return null;
+  const urgency = asId(raw?.urgency);
+  return {
+    id: String(id),
+    title: text(raw?.name) ?? '',
+    statusId: idOf(raw?.status),
+    createdAt: text(raw?.date) ?? text(raw?.date_creation),
+    updatedAt: text(raw?.date_mod),
+    urgency,
+    content: text(raw?.content),
+  };
 }
 
 /** Cliente HTTP do GLPI 11 (API de alto nível). */
@@ -210,6 +244,35 @@ export function createGlpiClient(options: GlpiHttpOptions): GlpiClient {
       const id = asId(body?.id) ?? asId(body?.ID) ?? asId(body?.ticket_id);
       if (id === null) throw new GlpiError('GLPI_BAD_RESPONSE', { httpStatus: response.status });
       return { ticketId: String(id) };
+    },
+
+    async listTickets(requesterId) {
+      const filter = encodeURIComponent(`user_recipient.id==${requesterId}`);
+      const response = await read(
+        `/api.php/Assistance/Ticket?filter=${filter}&sort=${encodeURIComponent('date_mod:desc')}&limit=50`,
+      );
+      if (response.status === 401 || response.status === 403) {
+        throw new GlpiError('GLPI_AUTH', { httpStatus: response.status });
+      }
+      if (!response.ok) throw new GlpiError('GLPI_SERVER', { httpStatus: response.status });
+      const body = await response.json().catch(() => null);
+      return extractList(body).flatMap((item) => {
+        const ticket = toTicket(item);
+        return ticket ? [ticket] : [];
+      });
+    },
+
+    async getTicket(ticketId) {
+      const response = await read(`/api.php/Assistance/Ticket/${encodeURIComponent(ticketId)}`);
+      if (response.status === 404) return null;
+      if (response.status === 401 || response.status === 403) {
+        throw new GlpiError('GLPI_AUTH', { httpStatus: response.status });
+      }
+      if (!response.ok) throw new GlpiError('GLPI_SERVER', { httpStatus: response.status });
+      const body = (await response.json().catch(() => null)) as { data?: unknown } | null;
+      return toTicket(
+        body && typeof body === 'object' && 'data' in body && body.data ? body.data : body,
+      );
     },
 
     async attachRequester(ticketId, requesterId) {

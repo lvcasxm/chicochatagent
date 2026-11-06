@@ -8,6 +8,7 @@ import type { Logger } from '../../lib/logger';
 import type { AnalyticsService } from '../analytics';
 import type { ContentService } from '../content';
 import type { ConversationsService } from '../conversations';
+import type { TranscriptsService } from '../transcripts';
 import { createTicketsRepository } from './repository';
 import { createTicketsService } from './service';
 
@@ -27,6 +28,8 @@ export function createTickets(deps: {
   conversations: ConversationsService;
   content: ContentService;
   analytics: AnalyticsService;
+  transcripts: TranscriptsService;
+  appOrigin: string;
   glpi: GlpiClient | null;
   summaryLlm: LlmClient | null;
   ticketIpRegex: string;
@@ -38,6 +41,8 @@ export function createTickets(deps: {
     conversations: deps.conversations,
     content: deps.content,
     analytics: deps.analytics,
+    transcripts: deps.transcripts,
+    appOrigin: deps.appOrigin,
     glpi: deps.glpi,
     summaryLlm: deps.summaryLlm,
     ipPattern: new RegExp(deps.ticketIpRegex),

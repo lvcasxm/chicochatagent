@@ -54,6 +54,8 @@ describe.skipIf(!TEST_DATABASE_URL)('chamados: abertura no GLPI', () => {
     findRequesterId: (email) => (glpiOn ?? glpiFake.client).findRequesterId(email),
     createTicket: (input) => (glpiOn ?? glpiFake.client).createTicket(input),
     attachRequester: (id, requester) => (glpiOn ?? glpiFake.client).attachRequester(id, requester),
+    listTickets: (id) => (glpiOn ?? glpiFake.client).listTickets(id),
+    getTicket: (id) => (glpiOn ?? glpiFake.client).getTicket(id),
   };
 
   let summary: ReturnType<typeof createScriptedLlm> = createScriptedLlm([], []);
