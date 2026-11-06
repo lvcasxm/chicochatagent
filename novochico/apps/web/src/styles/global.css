@@ -1,5 +1,188 @@
-/* Base mínima da F0. Tokens da marca, fontes e tema entram na F3. */
-body {
-  margin: 0;
-  font-family: system-ui, sans-serif;
+@import 'tailwindcss';
+@import './fonts.css';
+@import './tokens.css';
+
+/*
+ * Tradução do design system para o Tailwind (docs/DESIGN_SYSTEM.md). As escalas do Portal do
+ * Cidadão (espaçamento em múltiplos de 4, raios, movimento) valem; as cores são as da marca.
+ * Tudo o que não está aqui foi zerado de propósito: telas usam só estes tokens.
+ */
+@theme {
+  --color-*: initial;
+  --text-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --ease-*: initial;
+  --breakpoint-*: initial;
+  --container-*: initial;
+
+  --breakpoint-sm: 36rem; /* 576 */
+  --breakpoint-md: 40rem; /* 640 */
+  --breakpoint-lg: 56rem; /* 896 */
+  --breakpoint-xl: 75rem; /* 1200 */
+
+  --container-page: 75rem; /* largura máxima do conteúdo */
+  --container-reading: 45rem; /* coluna de leitura do chat: 720 px */
+  --container-field: 28rem; /* largura máxima de campo */
+  --container-dialog: 32rem;
+
+  --radius-xs: 0.25rem; /* detalhes pequenos */
+  --radius-tag: 0.5rem; /* etiquetas, que só informam */
+  --radius-lg: 1rem; /* cards, painéis, balão */
+  --radius-pill: 999px; /* tudo o que é clicável: botões e campos */
+
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  /* Troca da fonte dos títulos sem refatorar componentes (PEND-09, ADR-024). */
+  --font-display: 'Montserrat Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.3, 1.35, 0.5, 1);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-focus: var(--focus);
+  --color-danger: var(--danger);
+  --color-on-danger: var(--on-danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-scrim: var(--scrim);
+  --shadow-float: var(--float-shadow);
+}
+
+/*
+ * Escala tipográfica (Portal do Cidadão): cada estilo tem uma função fixa. Montserrat marca os
+ * títulos e a Inter cuida da leitura. Os dois primeiros encolhem no celular.
+ */
+@utility type-title-1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 2.375rem;
+  line-height: 2.75rem;
+  letter-spacing: -0.02em;
+  @media (width >= 40rem) {
+    font-size: 3.5rem;
+    line-height: 4rem;
+  }
+}
+@utility type-title-2 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  letter-spacing: -0.01em;
+  @media (width >= 40rem) {
+    font-size: 2.25rem;
+    line-height: 2.75rem;
+  }
+}
+@utility type-title-3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+@utility type-lead {
+  font-size: 1.25rem;
+  line-height: 1.875rem;
+}
+@utility type-body {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+@utility type-label {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 500;
+}
+@utility type-small {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+@utility type-caption {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Movimento: curto, só para feedback, e zerado com "reduzir movimento" (princípio I.6). */
+@utility motion-color {
+  transition-property: color, background-color, border-color, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: var(--ease-standard);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    background-color: var(--bg);
+    color: var(--fg);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    font-size: 1rem;
+    line-height: 1.5rem;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Foco sempre visível: 3 px, com afastamento. Preto no claro e azul no escuro (ADR-025). */
+  :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--accent);
+    color: var(--accent-fg);
+  }
+
+  /* Link: texto na cor do texto e sublinhado azul, porque azul sobre branco não passa de 2,1:1. */
+  a:not([class]),
+  .link {
+    color: var(--link);
+    text-decoration-line: underline;
+    text-decoration-color: var(--accent);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+    transition: text-decoration-thickness 150ms var(--ease-standard);
+  }
+  a:not([class]):hover,
+  .link:hover {
+    text-decoration-thickness: 4px;
+  }
+
+  /* Cada logotipo tem a versão para o tema em que cabe (identidade, seção I.4). */
+  .logo-on-light {
+    display: var(--logo-on-light-display);
+  }
+  .logo-on-dark {
+    display: var(--logo-on-dark-display);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }

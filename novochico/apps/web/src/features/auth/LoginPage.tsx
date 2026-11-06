@@ -1,13 +1,16 @@
+import { ArrowRight } from 'lucide-react';
 import { Navigate, useSearchParams } from 'react-router';
 import { isLoginErrorCode } from '@chicochat/shared';
 import { googleLoginUrl } from '../../lib/api';
 import { useAuth } from '../../app/auth/AuthContext';
+import { AppShell } from '../../app/layouts/AppShell';
+import { ButtonLink } from '../../components/Button';
+import { Notice } from '../../components/Notice';
 import { LOGIN_ERROR_MESSAGES } from './login-messages';
 
 /**
- * Tela de login. Estrutura provisória da F2: o visual definitivo vem com o design system (F3).
- * O motivo de uma falha chega em `?error=<código>`; códigos desconhecidos são ignorados, e
- * nenhum texto da URL é exibido, só mensagens fixas.
+ * Tela de login. O motivo de uma falha chega em `?error=<código>`; códigos desconhecidos são
+ * ignorados, e nenhum texto da URL é exibido, só mensagens fixas.
  */
 export function LoginPage() {
   const { state } = useAuth();
@@ -21,13 +24,26 @@ export function LoginPage() {
   const redirectTo = params.get('redirect') ?? '/';
 
   return (
-    <main>
-      <h1>ChicoChat+</h1>
-      <p>Atendimento de TI da Prefeitura Municipal de Pedro Leopoldo.</p>
+    <AppShell>
+      <div className="flex max-w-reading flex-col items-start gap-8">
+        <div className="flex flex-col gap-4">
+          <h1 className="type-title-1">Atendimento de TI</h1>
+          <p className="type-lead text-fg-muted">
+            Para servidores da Prefeitura Municipal de Pedro Leopoldo. Entre com a sua conta
+            institucional do Google.
+          </p>
+        </div>
 
-      {message && <p role="alert">{message}</p>}
+        {message && <Notice tone="danger">{message}</Notice>}
 
-      <a href={googleLoginUrl(redirectTo)}>Entrar com a conta Google institucional</a>
-    </main>
+        <ButtonLink
+          href={googleLoginUrl(redirectTo)}
+          iconEnd={<ArrowRight className="size-5" />}
+          className="w-full sm:w-auto"
+        >
+          Entrar com a conta Google institucional
+        </ButtonLink>
+      </div>
+    </AppShell>
   );
 }

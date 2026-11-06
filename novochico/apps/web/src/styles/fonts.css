@@ -1,0 +1,22 @@
+/*
+ * Fontes auto-hospedadas (ADR-024): nenhuma requisição a CDN externa.
+ * Só o subconjunto latino, que cobre o português. Variáveis, em WOFF2.
+ * Títulos em Montserrat; interface e texto em Inter.
+ */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2')
+    format('woff2-variations');
+}
+
+@font-face {
+  font-family: 'Montserrat Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/montserrat/files/montserrat-latin-wght-normal.woff2')
+    format('woff2-variations');
+}

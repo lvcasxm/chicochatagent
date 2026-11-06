@@ -130,6 +130,8 @@ flowchart LR
 
 **Riscos:** aparência genérica. Revise com o Opus a página de design **antes** de seguir para F4.
 
+**Situação:** implementada (ADR-035, `DESIGN_SYSTEM.md`). Ficaram de fora, por falta de arquivo (PEND-09): logotipo em vetor, grafismos e Velocity. Falta a revisão do Opus e a avaliação visual em aparelho real.
+
 ---
 
 ## F4 — Chat e integração com a IA

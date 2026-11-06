@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from '../../app/auth/AuthContext';
+import { Button } from '../../components/Button';
+import { Dialog } from '../../components/Dialog';
+import { Notice } from '../../components/Notice';
 
 /**
  * Aviso de privacidade, bloqueante: enquanto não for aceito, o resto do sistema não aparece.
  * O aceite é gravado no servidor, que também recusa o chat sem ele. O texto vem do sistema
- * anterior. Estrutura provisória da F2: o diálogo acessível definitivo vem com o design system.
+ * anterior. O diálogo não fecha por Esc nem por clique fora: só pelo aceite.
  */
 export function PrivacyNotice() {
   const { acceptPrivacyNotice } = useAuth();
@@ -23,20 +26,29 @@ export function PrivacyNotice() {
   }
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="privacy-title">
-      <h1 id="privacy-title">Aviso de Privacidade e Segurança</h1>
-      <p>Ao utilizar este assistente, você concorda que:</p>
-      <p>
-        <strong>Não digite dados sensíveis.</strong> É estritamente proibido informar senhas, dados
-        de cidadãos, números de processos sigilosos ou outras informações sensíveis no chat. Forneça
-        apenas as informações solicitadas.
-      </p>
-
-      {failed && <p role="alert">Não foi possível registrar o aceite. Tente novamente.</p>}
-
-      <button type="button" onClick={() => void accept()} disabled={busy} autoFocus>
-        Li e concordo
-      </button>
-    </div>
+    <Dialog
+      open
+      dismissible={false}
+      title="Aviso de Privacidade e Segurança"
+      description={
+        <>
+          <p>Ao utilizar este assistente, você concorda que:</p>
+          <p>
+            <strong>Não digite dados sensíveis.</strong> É estritamente proibido informar senhas,
+            dados de cidadãos, números de processos sigilosos ou outras informações sensíveis no
+            chat. Forneça apenas as informações solicitadas.
+          </p>
+        </>
+      }
+      footer={
+        <Button onClick={() => void accept()} disabled={busy}>
+          Li e concordo
+        </Button>
+      }
+    >
+      {failed && (
+        <Notice tone="danger">Não foi possível registrar o aceite. Tente novamente.</Notice>
+      )}
+    </Dialog>
   );
 }

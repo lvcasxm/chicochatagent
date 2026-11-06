@@ -130,7 +130,16 @@ const onlyConfigReadsEnv = {
 };
 
 export default defineConfig(
-  { ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**', 'docs/**', '.claude/**'] },
+  {
+    ignores: [
+      '**/dist/**',
+      '**/coverage/**',
+      '**/node_modules/**',
+      'docs/**',
+      '.claude/**',
+      'apps/web/public/**',
+    ],
+  },
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
   {

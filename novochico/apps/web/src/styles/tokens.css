@@ -1,0 +1,73 @@
+/*
+ * Tokens de cor do ChicoChat+ (docs/DESIGN_SYSTEM.md).
+ *
+ * A paleta é a da marca: branco #FBFBFB, preto #111110 e azul #24BCEC. Os neutros são misturas
+ * opacas do texto com o fundo (as escalas de 90% a 10% do material da marca). Texto e ícone sobre
+ * o azul são sempre #111110 (ADR-025). Só `danger` e `warning` saem da paleta da marca, e vêm do
+ * design system do Portal do Cidadão para manter o ecossistema da Prefeitura coerente.
+ *
+ * Nos pares testados, só valores hexadecimais de 6 dígitos: `tokens.test.ts` lê este arquivo e
+ * calcula o contraste de cada combinação.
+ */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #fbfbfb;
+  --surface: #efefef; /* 5% do texto sobre o fundo */
+  --surface-hover: #e8e8e8; /* 8% */
+  --border: #dfdfdf; /* 12%: divisória decorativa */
+  --border-strong: #7a7a7a; /* 55%: borda de controle, 3:1 no mínimo */
+  --fg: #111110;
+  --fg-muted: #5f5f5e; /* 68% */
+
+  --accent: #24bcec;
+  --accent-hover: #44c5ee;
+  --accent-fg: #111110;
+  --accent-soft: #d9f1f9;
+  --focus: #111110;
+  --link: #111110; /* azul sobre o claro não passa de 2,1:1 (ADR-025): o sublinhado é que é azul */
+
+  --danger: #8a1c13;
+  --on-danger: #fbfbfb;
+  --danger-soft: #f3e6e5;
+  --warning: #9a5200;
+  --warning-soft: #f4eae0;
+
+  --scrim: rgb(17 17 16 / 0.5);
+  --float-shadow: 0 12px 24px -8px rgb(17 17 16 / 0.18);
+
+  --logo-on-light-display: inline-block;
+  --logo-on-dark-display: none;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #111110;
+  --surface: #1d1d1c;
+  --surface-hover: #242423;
+  --border: #2d2d2c;
+  --border-strong: #6f6f6e; /* 40% */
+  --fg: #fbfbfb;
+  --fg-muted: #ababab; /* 68% */
+
+  --accent: #24bcec;
+  --accent-hover: #44c5ee;
+  --accent-fg: #111110;
+  --accent-soft: #143038;
+  --focus: #24bcec;
+  --link: #24bcec;
+
+  --danger: #ff9b8f;
+  --on-danger: #111110;
+  --danger-soft: #2c1c1a;
+  --warning: #f2a54c;
+  --warning-soft: #2a2117;
+
+  --scrim: rgb(0 0 0 / 0.65);
+  --float-shadow: 0 12px 24px -8px rgb(0 0 0 / 0.6);
+
+  --logo-on-light-display: none;
+  --logo-on-dark-display: inline-block;
+}
