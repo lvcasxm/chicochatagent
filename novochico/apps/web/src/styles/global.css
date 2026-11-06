@@ -1,0 +1,5 @@
+/* Base mínima da F0. Tokens da marca, fontes e tema entram na F3. */
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+}
