@@ -14,6 +14,17 @@ describe('loadConfig', () => {
     });
   });
 
+  it('aceita uma URL de migrations separada, mas só se for postgres', () => {
+    const migration = 'postgres://migrador:dev@127.0.0.1:5433/chicochat';
+    expect(loadConfig(VALID).databaseMigrationUrl).toBeUndefined();
+    expect(loadConfig({ ...VALID, DATABASE_MIGRATION_URL: migration }).databaseMigrationUrl).toBe(
+      migration,
+    );
+    expect(() => loadConfig({ ...VALID, DATABASE_MIGRATION_URL: 'http://x' })).toThrowError(
+      'DATABASE_MIGRATION_URL: valor inválido',
+    );
+  });
+
   it('converte a porta e aceita variáveis opcionais', () => {
     const config = loadConfig({ ...VALID, PORT: '3100', LOG_LEVEL: 'debug', NODE_ENV: 'test' });
     expect(config.port).toBe(3100);

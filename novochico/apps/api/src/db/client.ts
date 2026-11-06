@@ -1,9 +1,14 @@
+import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import type { Config } from '../config';
 import type { Logger } from '../lib/logger';
+import * as schema from './schema';
 
-/** Superfície do banco usada fora de `db/`. A F1 acrescenta o cliente Drizzle aqui. */
+export type OrmClient = NodePgDatabase<typeof schema>;
+
+/** Superfície do banco usada fora de `db/`. Só os repositórios dos módulos usam `orm`. */
 export interface Database {
+  orm: OrmClient;
   /** Rejeita se o banco não responder em até `PING_TIMEOUT_MS`. */
   ping(): Promise<void>;
   close(): Promise<void>;
@@ -25,6 +30,7 @@ export function createDatabase(config: Pick<Config, 'databaseUrl'>, logger: Logg
   });
 
   return {
+    orm: drizzle(pool, { schema }),
     async ping() {
       let timer: NodeJS.Timeout | undefined;
       const timeout = new Promise<never>((_, reject) => {
