@@ -188,7 +188,7 @@ Atenção ao **endereço público**:
 Nada disto foi possível durante a construção, que usou IA e GLPI de mentira. Faça, na ordem:
 
 1. **Login Google:** entrar com uma conta institucional; uma conta de outro domínio é recusada.
-2. **Gemini:** uma conversa real recebe resposta em stream; rodar a suíte de avaliação do agente (`eval:chat`, Anexo D) e conferir o caso 18 (regras fixas prevalecem sobre instruções conflitantes).
+2. **Gemini:** uma conversa real recebe resposta em stream; rodar a suíte de avaliação do agente (`npm run eval:chat`, Anexo D) e conferir o caso S7 (regras fixas prevalecem sobre instruções conflitantes).
 3. **GLPI (PEND-05):** abrir **um chamado de teste** com você presente, conferir título, descrição, solicitante, categoria e o link da conversa; conferir "Meus chamados" para a mesma pessoa; conferir o que um `tecnico` vê ao abrir o link.
 4. **Painel:** "Pedir uma mudança" nas instruções (assistente), "Ensaiar" e "Análise por IA" com dados reais.
 5. **Cabeçalhos:** `curl -sI https://<endereço>/` deve mostrar a política de conteúdo e o HSTS.

@@ -163,7 +163,7 @@ flowchart LR
 
 **Riscos:** regressão de comportamento com o SDK. Se houver divergência, compare com o endpoint compatível antes de alterar o prompt.
 
-**Situação:** implementada com fake (ADR-036). **Não verificado:** o Gemini real e a suíte `npm run eval:chat` (Anexo D), que dependem da chave no `.env`. O formulário de chamado é da F5.
+**Situação:** implementada com fake (ADR-036). **Atualização:** a suíte `npm run eval:chat` só foi criada na reorganização das instruções (ADR-045). Na época, **não verificado:** o Gemini real e a suíte (Anexo D), que dependem da chave no `.env`. O formulário de chamado é da F5.
 
 ---
 

@@ -557,3 +557,25 @@ Resolve a PEND-17 para o modelo do painel.
 - **Contexto:** o Google desativou o `gemini-2.5-flash` para novos usuários (404), o que derrubava a Análise IA e o assistente de instruções. O chat e o resumo do chamado já usavam `gemini-3.1-flash-lite` e não foram afetados.
 - **Decisão:** o padrão de `GEMINI_INSIGHTS_MODEL` passa a ser `gemini-3.1-flash-lite`, o mesmo do chat. Em seis pedidos de JSON por modelo, ele e o `gemini-3.5-flash-lite` responderam todos; `gemini-3.6-flash` respondeu 5 (e falhou em sequência em outro teste), `gemini-3.5-flash` respondeu 1, e `gemini-3.7-flash` e `gemini-3.8-flash` só devolveram 503 (alta demanda) nos três pedidos feitos a cada um. Com ele, a Análise IA e o assistente rodaram de verdade: temas válidos, documento revisado e pedido atendido.
 - **Consequências:** é uma medição pontual, não uma garantia. A variável permite trocar de modelo sem mexer no código, e um modelo mais forte pode valer a pena quando a demanda baixar, se a qualidade da análise não bastar. O painel não repete o pedido sozinho: um 503 do Google aparece como erro e a pessoa tenta de novo. Se a IA sair do ar, a edição manual e a publicação continuam.
+
+## ADR-045 — Instruções reorganizadas: comportamento, decisão e procedimentos
+
+Altera a ADR-030 no conteúdo, sem mudar o modelo de duas camadas.
+
+- **Contexto:** o texto herdado repetia em cada assunto o mesmo roteiro, o que levava o agente a repetir perguntas. As regras fixas proibiam abrir chamado sem diagnóstico, o que impedia casos como senha do AD. O atalho escolhido travava a categoria do chamado, e o servidor abria o formulário quando o agente falava em "abrir uma solicitação", mesmo no Sonner.
+- **Decisão:**
+  1. **Um documento só no painel, em três partes:** como atender, decisão e encaminhamento, e procedimentos (só Sonner/GRP, SEI, impressoras com defeito e segurança). Continua um único texto, para manter comparação, assistente, ensaio e histórico.
+  2. **Sem montagem dinâmica nem classificador:** o documento vai inteiro em cada mensagem. Assim o agente muda de assunto no meio da conversa sem nada para errar a escolha.
+  3. **Regras fixas enxutas:** a triagem passa a separar problema, pedido de serviço e outro canal. Entram fora de escopo e "não repetir perguntas". Sai a frase obrigatória de escalonamento.
+  4. **Nome, setor e IP:** continuam no formulário, nunca no chat. Além do topo do chamado, passam a entrar na seção "Contexto" do resumo. Entram no servidor, depois da IA, para o nome e o IP não irem ao provedor; o setor já fazia parte do prompt do resumo.
+  5. **Resumo:** regras para pedido de acesso ao Sonner (módulo, funcionalidade e motivo), impressora com defeito físico (repasse à Repros) e pedido de serviço. A contingência leva as demais falas da pessoa, para um dado curto como o módulo não se perder.
+  6. **Categoria do atalho vira sugestão:** vale a que a IA escolher entre as permitidas.
+  7. **Formulário:** "abrir uma solicitação" deixa de liberar, e nenhuma frase de abertura libera se citar Sonner, GRP ou SEI. Quem libera é o marcador; a frase é só a contingência.
+  8. **Atalho do Sonner abre conversa,** em vez do PDF, porque é nela que se pede acesso a um módulo. A Ouvidoria sai das instruções e do card.
+  9. **`npm run eval:chat`:** os cenários do Anexo D, com o Gemini real, fora de `npm test`.
+  10. O teste que proíbe o domínio da Prefeitura no código abre exceção só para `suporte.sei@` e `sei.`, canais públicos citados nas instruções.
+- **Consequências e riscos:**
+  - Bancos com versão publicada não mudam sozinhos: o texto novo entra pelo painel, e os cards por lá ou por SQL.
+  - A suíte depende do modelo, que varia entre execuções: um cenário pode falhar uma vez e passar na seguinte. Falha repetida indica problema de instrução.
+  - O endereço do site de suporte ao SEI não é conhecido: o agente cita só o nome, dentro da intranet.
+  - `https://sei.pedroleopoldo.mg.gov.br` não respondeu de fora da rede da Prefeitura durante a construção; o endereço foi informado pelo responsável.
