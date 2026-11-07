@@ -56,31 +56,33 @@ describe.skipIf(!TEST_DATABASE_URL)('content service', () => {
   });
 
   describe('listHomeCards', () => {
-    it('lista os dez cards visíveis, sem o card oculto', async () => {
+    it('a tela inicial mostra só os quatro atalhos principais, sem o card oculto', async () => {
       await seedDatabase(orm());
       const cards = await content().listHomeCards();
-      expect(cards).toHaveLength(10);
+      expect(cards).toHaveLength(4);
       expect(cards.map((card) => card.key)).not.toContain('access');
-      expect(cards.map((card) => card.title).sort()).toEqual(
-        TICKET_CATEGORIES.filter((title) => title !== DEFAULT_TICKET_CATEGORY).sort(),
-      );
+      // Os demais ficam cadastrados (e desativados), com título válido de chamado.
+      const all = await orm().select().from(categories);
+      expect(
+        all
+          .filter((card) => card.action !== 'hidden')
+          .map((card) => card.title)
+          .sort(),
+      ).toEqual(TICKET_CATEGORIES.filter((title) => title !== DEFAULT_TICKET_CATEGORY).sort());
     });
 
-    it('segue a ordem de exibição, com SEI e "Outra coisa?" por último', async () => {
+    it('segue a ordem: computador, senha, GRP Sonner e rede', async () => {
       await seedDatabase(orm());
       const keys = (await content().listHomeCards()).map((card) => card.key);
-      expect(keys).toEqual([
-        'hardware',
-        'network',
-        'email',
-        'security',
-        'install',
-        'grp',
-        'printer',
-        'password',
-        'sei',
-        'other',
-      ]);
+      expect(keys).toEqual(['hardware', 'password', 'grp', 'network']);
+    });
+
+    it('a administração reativa um card que não está na tela inicial', async () => {
+      await seedDatabase(orm());
+      await orm().update(categories).set({ active: true }).where(eq(categories.key, 'printer'));
+      const keys = (await content().listHomeCards()).map((card) => card.key);
+      expect(keys).toContain('printer');
+      expect(keys).toHaveLength(5);
     });
 
     it('não lista cards desativados', async () => {
@@ -88,7 +90,7 @@ describe.skipIf(!TEST_DATABASE_URL)('content service', () => {
       await orm().update(categories).set({ active: false }).where(eq(categories.key, 'network'));
       const keys = (await content().listHomeCards()).map((card) => card.key);
       expect(keys).not.toContain('network');
-      expect(keys).toHaveLength(9);
+      expect(keys).toHaveLength(3);
     });
 
     it('descreve a ação de cada card e o link secundário do GRP', async () => {
@@ -103,11 +105,6 @@ describe.skipIf(!TEST_DATABASE_URL)('content service', () => {
         secondaryLink: null,
       });
       expect(byKey['hardware']?.cannedMessage).toMatch(/^Olá! /);
-      expect(byKey['sei']).toMatchObject({
-        action: 'external_link',
-        externalUrl: 'https://joseias.pl.mg.gov.br',
-        cannedMessage: null,
-      });
       expect(byKey['grp']?.action).toBe('external_link');
       expect(byKey['grp']?.secondaryLink).toEqual({
         label: 'Ouvidoria aqui',

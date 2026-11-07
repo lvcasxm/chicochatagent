@@ -1,6 +1,7 @@
 import { ExternalLink } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { HomeCardView } from '@chicochat/shared';
+import { buttonClass } from '../../components/Button';
 
 export interface HomeScreenProps {
   cards: readonly HomeCardView[];
@@ -14,8 +15,9 @@ export interface HomeScreenProps {
 const EXTERNAL = { target: '_blank', rel: 'noopener noreferrer' } as const;
 
 /**
- * Tela inicial: logo, pergunta, campo de mensagem e atalhos em lista compacta com divisórias,
- * em vez de uma grade de cards (seção I.6).
+ * Tela inicial: pergunta, campo de mensagem e, no máximo, poucos atalhos em pílulas, só com o
+ * título. Descrição e links secundários ficam fora daqui: quem precisa de mais descreve o problema
+ * no campo de mensagem. Quais atalhos aparecem é decisão da administração (cards ativos).
  */
 export function HomeScreen({
   cards,
@@ -31,7 +33,7 @@ export function HomeScreen({
           <h1 className="type-title-2">Como posso te ajudar hoje?</h1>
           <p className="type-lead text-fg-muted">
             Sou o assistente de IA da Prefeitura Municipal de Pedro Leopoldo, especializado em TI.
-            Descreva seu problema ou escolha um dos atalhos abaixo.
+            Descreva o seu problema ou escolha um atalho.
           </p>
         </div>
       </div>
@@ -39,52 +41,32 @@ export function HomeScreen({
       {composer}
 
       {cards.length > 0 && (
-        <section aria-labelledby="atalhos" className="flex flex-col gap-2">
+        <section aria-labelledby="atalhos" className="flex flex-col gap-3">
           <h2 id="atalhos" className="type-label text-fg-muted">
             Atalhos
           </h2>
-          <ul className="flex flex-col border-t border-border">
+          <ul className="flex flex-wrap gap-3">
             {cards.map((card) => (
-              <li key={card.key} className="border-b border-border">
+              <li key={card.key}>
                 {card.action === 'chat' ? (
                   <button
                     type="button"
                     disabled={disabled}
                     onClick={() => onPickCard(card)}
-                    className="motion-color flex min-h-16 w-full cursor-pointer flex-col items-start gap-1 rounded-tag px-2 py-3 text-left hover:bg-surface-hover disabled:cursor-not-allowed disabled:text-fg-muted"
+                    className={buttonClass('outline')}
                   >
-                    <span className="type-label">{card.title}</span>
-                    {card.description && (
-                      <span className="type-small text-fg-muted">{card.description}</span>
-                    )}
+                    {card.title}
                   </button>
                 ) : (
-                  <div className="flex flex-wrap items-center justify-between gap-x-4 px-2 py-3">
-                    <a
-                      href={card.externalUrl ?? undefined}
-                      {...EXTERNAL}
-                      className="motion-color flex min-h-11 flex-1 flex-col justify-center gap-1 text-fg no-underline hover:underline"
-                    >
-                      <span className="type-label inline-flex items-center gap-2">
-                        {card.title}
-                        <ExternalLink aria-hidden="true" className="size-4" />
-                        <span className="sr-only">(abre em nova aba)</span>
-                      </span>
-                      {card.description && (
-                        <span className="type-small text-fg-muted">{card.description}</span>
-                      )}
-                    </a>
-                    {card.secondaryLink && (
-                      <a
-                        href={card.secondaryLink.url}
-                        {...EXTERNAL}
-                        className="type-small inline-flex min-h-11 items-center"
-                      >
-                        {card.secondaryLink.label}
-                        <span className="sr-only"> (abre em nova aba)</span>
-                      </a>
-                    )}
-                  </div>
+                  <a
+                    href={card.externalUrl ?? undefined}
+                    {...EXTERNAL}
+                    className={buttonClass('outline')}
+                  >
+                    {card.title}
+                    <ExternalLink aria-hidden="true" className="size-4" />
+                    <span className="sr-only">(abre em nova aba)</span>
+                  </a>
                 )}
               </li>
             ))}

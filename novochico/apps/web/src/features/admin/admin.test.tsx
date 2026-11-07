@@ -128,7 +128,9 @@ describe('acesso à administração', () => {
   it('o chat mostra o atalho da administração só para administradores', async () => {
     mockApi({});
     renderAt('/');
-    expect(await screen.findByRole('link', { name: /administração/i })).toBeTruthy();
+    const list = await screen.findByRole('navigation', { name: 'Conversas' });
+    const shield = await within(list).findByRole('link', { name: 'Painel de administração' });
+    expect(shield.getAttribute('href')).toBe('/admin');
     cleanup();
     mockApi({}, { ...ADMIN, role: 'user' });
     renderAt('/');

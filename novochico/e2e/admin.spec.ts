@@ -19,6 +19,20 @@ test.describe('administração', () => {
     }
   });
 
+  test('o escudo da lista de conversas leva o administrador ao painel', async ({
+    page,
+    context,
+    isMobile,
+  }) => {
+    await signIn(context, 'admin');
+    await page.goto('/');
+    // No celular, a lista de conversas fica recolhida.
+    if (isMobile) await page.getByRole('button', { name: 'Conversas' }).click();
+    await page.getByRole('link', { name: 'Painel de administração' }).click();
+    await expect(page).toHaveURL(/\/admin$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Visão geral' })).toBeVisible();
+  });
+
   test('instruções: pedir à IA, comparar, ensaiar e ver a confirmação de publicar', async ({
     page,
     context,

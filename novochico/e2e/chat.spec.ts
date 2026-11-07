@@ -37,6 +37,9 @@ test.describe('atendimento de ponta a ponta (IA e GLPI de mentira)', () => {
     await expect(page.getByText('OPEN_TICKET_FORM')).toHaveCount(0);
     expect(await seriousViolations(page)).toEqual([]);
 
+    // O aviso de formulário liberado chega depois do texto; rolar antes dele aparecer deixaria o
+    // botão se mover durante o clique.
+    await expect(page.getByText('Abertura de chamado liberada')).toBeVisible();
     await toBottom(page);
     await page.getByRole('button', { name: 'Abrir chamado' }).first().click();
     const dialog = page.getByRole('dialog');

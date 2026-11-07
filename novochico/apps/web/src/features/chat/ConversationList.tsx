@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import type { ConversationSummary } from '@chicochat/shared';
@@ -6,12 +6,15 @@ import { Button } from '../../components/Button';
 import { Dialog } from '../../components/Dialog';
 import { IconButton } from '../../components/IconButton';
 import { Notice } from '../../components/Notice';
+import { Tooltip } from '../../components/Tooltip';
 import { cx } from '../../lib/cx';
 import { relativeTime } from '../../lib/time';
 
 export interface ConversationListProps {
   conversations: readonly ConversationSummary[];
   activeId: string | null;
+  /** Mostra o escudo que leva ao painel. A tela só esconde: quem decide o acesso é a API. */
+  showAdminLink?: boolean;
   failed: boolean;
   onDelete: (id: string) => Promise<void>;
 }
@@ -20,6 +23,7 @@ export interface ConversationListProps {
 export function ConversationList({
   conversations,
   activeId,
+  showAdminLink = false,
   failed,
   onDelete,
 }: ConversationListProps) {
@@ -50,9 +54,22 @@ export function ConversationList({
         <Plus aria-hidden="true" className="size-5" />
         Nova conversa
       </Link>
-      <Link to="/chamados" className="type-label inline-flex min-h-11 items-center px-2">
-        Meus chamados
-      </Link>
+      <div className="flex items-center justify-between gap-2">
+        <Link to="/chamados" className="type-label inline-flex min-h-11 items-center px-2">
+          Meus chamados
+        </Link>
+        {showAdminLink && (
+          <Tooltip label="Painel de administração">
+            <Link
+              to="/admin"
+              aria-label="Painel de administração"
+              className="motion-color inline-flex size-11 shrink-0 items-center justify-center rounded-pill text-fg hover:bg-surface-hover"
+            >
+              <ShieldCheck aria-hidden="true" className="size-5" />
+            </Link>
+          </Tooltip>
+        )}
+      </div>
 
       {failed && <Notice tone="warning">Não foi possível carregar a lista de conversas.</Notice>}
 

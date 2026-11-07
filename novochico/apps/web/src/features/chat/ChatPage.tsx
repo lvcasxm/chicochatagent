@@ -1,4 +1,4 @@
-import { LogOut, Menu, Settings, X } from 'lucide-react';
+import { LogOut, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useAuth } from '../../app/auth/AuthContext';
@@ -171,20 +171,13 @@ export function ChatPage() {
   return (
     <AppShell
       actions={
-        <>
-          {state.status === 'authenticated' && state.me.role === 'admin' && (
-            <ButtonLink variant="ghost" href="/admin" iconStart={<Settings className="size-5" />}>
-              Administração
-            </ButtonLink>
-          )}
-          <Button
-            variant="ghost"
-            iconStart={<LogOut className="size-5" />}
-            onClick={() => void leave()}
-          >
-            Sair
-          </Button>
-        </>
+        <Button
+          variant="ghost"
+          iconStart={<LogOut className="size-5" />}
+          onClick={() => void leave()}
+        >
+          Sair
+        </Button>
       }
     >
       {signOutFailed && (
@@ -220,6 +213,7 @@ export function ChatPage() {
             <ConversationList
               conversations={lists.conversations}
               activeId={conversationId ?? null}
+              showAdminLink={state.me.role === 'admin'}
               failed={lists.listFailed}
               onDelete={removeConversation}
             />
