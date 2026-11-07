@@ -7,6 +7,7 @@ import {
 import type { TicketSummary, TranscriptLine } from './summary';
 
 const MAX_PROBLEM_LENGTH = 2500;
+const MAX_OTHER_STATEMENTS_LENGTH = 1500;
 const NO_DETAILS =
   'Os detalhes do problema não puderam ser consolidados automaticamente no momento da abertura.';
 
@@ -15,12 +16,12 @@ const GREETING_ONLY = /^(oi|olá|ola|bom dia|boa tarde|boa noite|e aí|e ai)[\s!
 /** Mensagem pronta dos cards ("Olá! Tenho uma demanda de TI…" e as demais). */
 const CANNED_START = /^olá!\s+(estou|preciso|tenho)\b/i;
 
-/** A maior fala da pessoa que diga algo: sem saudação sozinha e sem mensagem pronta de card. */
-export function mostSignificantUserMessage(
+/** As falas da pessoa que dizem algo: sem saudação sozinha e sem mensagem pronta de card. */
+function significantUserMessages(
   transcript: readonly TranscriptLine[],
   cannedMessages: readonly string[],
-): string | null {
-  const candidates = transcript
+): string[] {
+  return transcript
     .filter((line) => line.role === 'user')
     .map((line) => line.content.trim())
     .filter(
@@ -30,6 +31,14 @@ export function mostSignificantUserMessage(
         !cannedMessages.includes(text) &&
         !CANNED_START.test(text),
     );
+}
+
+/** A maior fala significativa da pessoa. */
+export function mostSignificantUserMessage(
+  transcript: readonly TranscriptLine[],
+  cannedMessages: readonly string[],
+): string | null {
+  const candidates = significantUserMessages(transcript, cannedMessages);
   if (candidates.length === 0) return null;
   const longest = candidates.reduce((a, b) => (b.length > a.length ? b : a));
   return longest.length > MAX_PROBLEM_LENGTH ? longest.slice(0, MAX_PROBLEM_LENGTH) : longest;
@@ -41,15 +50,22 @@ export function mostSignificantUserMessage(
  */
 export function buildFallbackSummary(input: {
   sector: string;
-  lockedCategory: string | null;
+  cardCategory: string | null;
   transcript: readonly TranscriptLine[];
   cannedMessages: readonly string[];
 }): TicketSummary {
   const problem = mostSignificantUserMessage(input.transcript, input.cannedMessages) ?? NO_DETAILS;
+  // As demais falas seguem junto: um dado curto, como o módulo do Sonner, não pode se perder.
+  const others = significantUserMessages(input.transcript, input.cannedMessages)
+    .filter((text) => text.slice(0, MAX_PROBLEM_LENGTH) !== problem)
+    .map((text) => `- ${text}`)
+    .join('\n')
+    .slice(0, MAX_OTHER_STATEMENTS_LENGTH);
+  const otherStatements = others === '' ? '' : `\n${others}`;
   const description = [
     `Problema identificado:\n${problem}`,
-    `Contexto:\nSetor: ${input.sector}. Escopo não confirmado pelo usuário.`,
-    'Comportamento observado:\nDetalhes adicionais não puderam ser consolidados automaticamente no momento da abertura.',
+    'Contexto:\nEscopo não confirmado pelo usuário.',
+    `Comportamento observado:\nDetalhes adicionais não puderam ser consolidados automaticamente no momento da abertura.${otherStatements}`,
     'Tentativas já realizadas:\nNão foi possível consolidar automaticamente as tentativas realizadas.',
     'Impacto operacional:\nImpacto não detalhado pelo usuário; assumir impacto sobre as atividades do setor informado.',
     'Ação esperada:\nRealizar diagnóstico técnico com base no problema informado e consultar a conversa completa vinculada ao chamado se forem necessários detalhes adicionais.',
@@ -58,7 +74,7 @@ export function buildFallbackSummary(input: {
   return {
     title: `Solicitação de suporte — ${input.sector}`.slice(0, TICKET_TITLE_MAX_LENGTH),
     description,
-    category: input.lockedCategory ?? DEFAULT_TICKET_CATEGORY,
+    category: input.cardCategory ?? DEFAULT_TICKET_CATEGORY,
     urgency: DEFAULT_URGENCY,
     source: 'fallback',
   };

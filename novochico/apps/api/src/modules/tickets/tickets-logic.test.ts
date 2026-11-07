@@ -21,6 +21,7 @@ import {
   buildSummarySystemPrompt,
   buildSummaryUserPrompt,
   normalizeDescription,
+  withRequesterContext,
   parseSummary,
   summarizeWithLlm,
 } from './summary';
@@ -113,8 +114,12 @@ describe('resumo: formato da saída', () => {
     expect(parseSummary(valid({ urgencia: input }), null)?.urgency).toBe(expected);
   });
 
-  it('categoria: a travada vence; senão a da IA, se válida; senão a geral', () => {
-    expect(parseSummary(valid(), 'Rede e internet')?.category).toBe('Rede e internet');
+  it('categoria: a da IA, se válida; senão a do atalho; senão a geral', () => {
+    // A conversa pode ter mudado de assunto depois do atalho.
+    expect(parseSummary(valid(), 'Rede e internet')?.category).toBe('Manutenção de Impressora');
+    expect(parseSummary(valid({ categoria: 'Inventada' }), 'Rede e internet')?.category).toBe(
+      'Rede e internet',
+    );
     expect(parseSummary(valid(), null)?.category).toBe('Manutenção de Impressora');
     expect(parseSummary(valid({ categoria: 'Inventada' }), null)?.category).toBe(
       'Suporte técnico geral',
@@ -148,17 +153,19 @@ describe('resumo: prompt', () => {
     expect(prompt).not.toContain('"Teste"');
   });
 
-  it('a conversa vai na mensagem do usuário, com o setor e a categoria travada', () => {
+  it('a conversa vai na mensagem do usuário, com o setor e a categoria do atalho', () => {
     const text = buildSummaryUserPrompt({
       sector: 'Secretaria de Saúde',
-      lockedCategory: 'Rede e internet',
+      cardCategory: 'Rede e internet',
       transcript: [
         { role: 'user', content: 'a internet caiu' },
         { role: 'assistant', content: 'Qual o equipamento?' },
       ],
     });
     expect(text).toContain('Setor do usuário: Secretaria de Saúde');
-    expect(text).toContain('Categoria já escolhida pelo usuário (não altere): Rede e internet');
+    expect(text).toContain(
+      'Categoria do atalho escolhido no início (troque se a conversa mostrar outro assunto): Rede e internet',
+    );
     expect(text).toContain('USUÁRIO: a internet caiu');
     expect(text).toContain('BOT: Qual o equipamento?');
   });
@@ -170,7 +177,7 @@ describe('resumo: tentativas', () => {
 
   const base = {
     sector: 'Saúde',
-    lockedCategory: null,
+    cardCategory: null,
     transcript: [{ role: 'user' as const, content: 'o PC não liga' }],
   };
 
@@ -263,7 +270,7 @@ describe('resumo: contingência sem IA', () => {
   it('sem fala significativa, usa o texto padrão', () => {
     const summary = buildFallbackSummary({
       sector: 'Saúde',
-      lockedCategory: null,
+      cardCategory: null,
       transcript: [{ role: 'user', content: 'Olá' }],
       cannedMessages: canned,
     });
@@ -275,7 +282,7 @@ describe('resumo: contingência sem IA', () => {
   it('título, urgência e categoria seguem a especificação, e a transcrição não entra', () => {
     const summary = buildFallbackSummary({
       sector: 'Secretaria de Saúde',
-      lockedCategory: 'Rede e internet',
+      cardCategory: 'Rede e internet',
       transcript: [
         { role: 'user', content: 'A internet caiu no setor' },
         { role: 'assistant', content: 'RESPOSTA-DO-BOT-QUE-NAO-DEVE-ENTRAR' },
@@ -289,17 +296,49 @@ describe('resumo: contingência sem IA', () => {
       source: 'fallback',
     });
     expect(summary.description).toContain('Problema identificado:\nA internet caiu no setor');
-    expect(summary.description).toContain(
-      'Setor: Secretaria de Saúde. Escopo não confirmado pelo usuário.',
-    );
+    expect(summary.description).toContain('Contexto:\nEscopo não confirmado pelo usuário.');
     expect(summary.description).not.toContain('RESPOSTA-DO-BOT');
     expect(normalizeDescription(summary.description)).toBe(summary.description);
+  });
+
+  it('as demais falas da pessoa seguem junto, para um dado curto não se perder', () => {
+    const summary = buildFallbackSummary({
+      sector: 'Saúde',
+      cardCategory: null,
+      transcript: [
+        { role: 'user', content: 'Preciso de acesso a um módulo do Sonner para o meu trabalho' },
+        { role: 'assistant', content: 'Qual módulo?' },
+        { role: 'user', content: 'Compras' },
+      ],
+      cannedMessages: [],
+    });
+    expect(summary.description).toContain('- Compras');
+    expect(summary.description).not.toContain('- Preciso de acesso');
+    expect(normalizeDescription(summary.description)).toBe(summary.description);
+  });
+
+  it('nome, setor e IP entram no início do Contexto, vindos do formulário', () => {
+    const description = 'Problema identificado:\nX\n\nContexto:\nY\n\nComportamento observado:\nZ';
+    expect(
+      withRequesterContext(description, {
+        requesterName: 'Maria',
+        sector: 'Saúde',
+        machineIp: '10.0.0.10',
+      }),
+    ).toContain('Contexto:\nSolicitante: Maria. Setor: Saúde. IP da máquina: 10.0.0.10.\nY');
+    expect(
+      withRequesterContext(description, {
+        requesterName: 'Maria',
+        sector: 'Saúde',
+        machineIp: null,
+      }),
+    ).toContain('IP da máquina: não informado, pessoa sem acesso à máquina.');
   });
 
   it('o título da contingência nunca passa de 80 caracteres', () => {
     const summary = buildFallbackSummary({
       sector: 'S'.repeat(200),
-      lockedCategory: null,
+      cardCategory: null,
       transcript: [],
       cannedMessages: [],
     });

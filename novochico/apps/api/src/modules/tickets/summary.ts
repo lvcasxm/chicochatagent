@@ -49,7 +49,7 @@ export function buildSummarySystemPrompt(): string {
 /** Mensagem do usuário ao modelo (Anexo B): setor, categoria travada e a transcrição. */
 export function buildSummaryUserPrompt(input: {
   sector: string;
-  lockedCategory: string | null;
+  cardCategory: string | null;
   transcript: readonly TranscriptLine[];
 }): string {
   const lines = input.transcript.map(
@@ -57,8 +57,10 @@ export function buildSummaryUserPrompt(input: {
   );
   return [
     `Setor do usuário: ${input.sector}`,
-    ...(input.lockedCategory
-      ? [`Categoria já escolhida pelo usuário (não altere): ${input.lockedCategory}`]
+    ...(input.cardCategory
+      ? [
+          `Categoria do atalho escolhido no início (troque se a conversa mostrar outro assunto): ${input.cardCategory}`,
+        ]
       : []),
     '',
     'Transcrição da conversa (use APENAS para extrair os fatos — NÃO copie trechos, reescreva tudo como narrativa):',
@@ -72,6 +74,25 @@ const responseSchema = z.object({
   categoria: z.string().optional(),
   urgencia: z.unknown().optional(),
 });
+
+/** Quem pediu e onde, como o formulário informou: nunca vem da IA. */
+export interface RequesterContext {
+  requesterName: string;
+  sector: string;
+  /** Nulo quando a pessoa declarou não ter acesso à máquina. */
+  machineIp: string | null;
+}
+
+/**
+ * Põe nome, setor e IP no início da seção "Contexto" do resumo. Entram aqui, no servidor, para o
+ * técnico vê-los no resumo sem que o nome e o IP sejam enviados ao provedor de IA; o setor já
+ * faz parte do prompt do resumo (ADR-045).
+ */
+export function withRequesterContext(description: string, requester: RequesterContext): string {
+  const ip = requester.machineIp ?? 'não informado, pessoa sem acesso à máquina';
+  const line = `Solicitante: ${requester.requesterName}. Setor: ${requester.sector}. IP da máquina: ${ip}.`;
+  return description.replace('Contexto:\n', () => `Contexto:\n${line}\n`);
+}
 
 /** Tira `#`, `*`, `_` e espaços das pontas de um título de seção ("### **Contexto:**" -> "Contexto:"). */
 function cleanHeading(line: string): string {
@@ -114,7 +135,7 @@ export function normalizeDescription(raw: string): string | null {
 }
 
 /** Valida a saída do modelo. Nulo conta como falha da tentativa. */
-export function parseSummary(output: unknown, lockedCategory: string | null): TicketSummary | null {
+export function parseSummary(output: unknown, cardCategory: string | null): TicketSummary | null {
   const parsed = responseSchema.safeParse(output);
   if (!parsed.success) return null;
 
@@ -136,7 +157,8 @@ export function parseSummary(output: unknown, lockedCategory: string | null): Ti
     title,
     description,
     urgency,
-    category: lockedCategory ?? validSuggestion ?? DEFAULT_TICKET_CATEGORY,
+    // O atalho é só o ponto de partida: a conversa pode ter mudado de assunto (ADR-045).
+    category: validSuggestion ?? cardCategory ?? DEFAULT_TICKET_CATEGORY,
     source: 'llm',
   };
 }
@@ -162,7 +184,7 @@ const sleep = (ms: number, signal: AbortSignal) =>
 export async function summarizeWithLlm(input: {
   llm: LlmClient;
   sector: string;
-  lockedCategory: string | null;
+  cardCategory: string | null;
   transcript: readonly TranscriptLine[];
   signal: AbortSignal;
   onFailure?: (attempt: number, error: unknown) => void;
@@ -180,7 +202,7 @@ export async function summarizeWithLlm(input: {
         user,
         signal: AbortSignal.any([input.signal, AbortSignal.timeout(ATTEMPT_TIMEOUT_MS)]),
       });
-      const summary = parseSummary(output, input.lockedCategory);
+      const summary = parseSummary(output, input.cardCategory);
       if (summary) return summary;
       input.onFailure?.(attempt, new Error('Resumo fora do formato'));
     } catch (error) {
