@@ -293,6 +293,8 @@ flowchart LR
 
 **Riscos:** retrabalho tardio. Os itens anteriores já devem ter sido exigidos nas fases, e aqui só se confere.
 
+**Situação:** implementada (ADR-041, `docs/SECURITY_REVIEW.md`). Falta o que só pessoas fazem: leitor de tela e aparelho físico, e a revisão do Opus.
+
 ---
 
 ## F10 — Implantação

@@ -502,3 +502,20 @@ Detalha as ADR-018 (métricas) e ADR-030 (instruções do agente).
   - O ensaio e a Análise IA dependem da qualidade do modelo; nada disso foi exercitado com o Gemini real.
   - As telas foram verificadas por testes (inclusive axe), não por revisão visual no navegador nem por leitor de tela. O Opus deve revisar a tela de instruções antes de encerrar a fase (exigência do plano).
   - Não há paginação na lista de cards nem no histórico de versões.
+
+## ADR-041 — Endurecimento (F9)
+
+Detalha a seção K do manual.
+
+- **Contexto:** a F9 confere segurança, acessibilidade e desempenho com tudo já construído, usando os fakes de IA e de GLPI.
+- **Decisão:**
+  1. **A API serve a interface** (`WEB_DIST_DIR`, `@fastify/static`): mesma origem, um serviço só e os cabeçalhos de segurança saindo de um lugar. Os arquivos do build são públicos; `/api/...` continua protegida e com 404 próprio em JSON. Endereço da interface (`/admin/instrucoes`) recebe o `index.html`; arquivo com extensão que não existe é 404. Arquivos com hash no nome ficam em cache por um ano; o resto, sempre revalidado. Sem `WEB_DIST_DIR` (desenvolvimento), quem serve é o Vite. Sem build na pasta indicada, a partida falha.
+  2. **Cabeçalhos** (`@fastify/helmet`): CSP com tudo na própria origem, `script-src 'self'` **sem `unsafe-inline`**, `frame-ancestors 'none'`, `object-src 'none'`; HSTS só com endereço https; `nosniff`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, isolamento de origem cruzada. **`style-src` mantém `'unsafe-inline'`**, porque as primitivas do Radix (diálogo, lista) inserem `<style>` ao abrir; script nunca. Respostas da API saem com `Cache-Control: no-store`.
+  3. **Limites por pessoa** (`http/user-rate-limit.ts`), conforme a seção K: mensagens 15/min e 200/h, abertura de chamado 5/10 min, `ticket-check` 20/min, `tickets/mine` 10/min, Análise IA 5/h, exportação 5/min. Rodam em `preHandler`, depois do login, porque o `@fastify/rate-limit` roda antes e não sabe quem é a pessoa; ele segue cuidando do limite global e do login, por IP. Janela deslizante em memória (uma instância, ADR-003). Tentativas recusadas contam, e o limite interno de 20/min do chat foi removido para não haver dois.
+  4. **Tentativas de chamado abandonadas:** `pending` com mais de 10 minutos vira `unknown` (`ABANDONED`) por tarefa periódica, junto da varredura de conversas. Nunca é reenviada sozinha (ADR-037) e aparece na lista de falhas do painel.
+  5. **E2E** (`npm run e2e`, Playwright com o Chrome instalado, sem baixar navegador): sobe um banco novo, constrói a interface e a serve pela API com os fakes; quatro combinações (desktop e celular, tema claro e escuro). O axe roda no navegador de verdade, **com contraste**, injetado pelo protocolo para manter a CSP ligada. Usuários e sessões do teste são criados direto no banco.
+  6. **Achados do E2E corrigidos:** (a) o diálogo de chamado ficava aberto depois de "Fechar" no navegador real, porque estava dentro do ramo da conversa e era remontado; passou para fora dele; (b) áreas rolantes (`pre`, tabelas, diff) não eram alcançáveis pelo teclado; agora têm `tabIndex` e rótulo.
+- **Consequências e riscos:**
+  - O que o E2E não cobre: leitor de tela, aparelho físico, e qualquer serviço real (Google, Gemini, GLPI).
+  - O limite por pessoa vive na memória do processo: um reinício zera as janelas e mais de uma instância dividiria a contagem. Aceitável para uma instância (ADR-003).
+  - Atrás de proxy, `TRUST_PROXY=true` é obrigatório para o limite por IP enxergar o cliente; sem ele todos dividem o IP do proxy.
