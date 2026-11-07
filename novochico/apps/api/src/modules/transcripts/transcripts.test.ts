@@ -447,7 +447,9 @@ describe.skipIf(!TEST_DATABASE_URL)('Meus chamados e transcrição', () => {
         requesterName: 'Maria Silva Santos',
         sector: 'Secretaria de Saúde',
       });
-      expect(body.summary).toBe(SECTIONS);
+      expect(body.summary).toBe(
+        SECTIONS.replace('Contexto:\n', 'Contexto:\nSolicitante: Maria Silva Santos. Setor: Secretaria de Saúde. IP da máquina: 10.1.2.30.\n'),
+      );
       expect(body.messages.map((m) => m.role)).toEqual(['user', 'assistant']);
       expect(response.body).not.toContain(who.user.email);
     });

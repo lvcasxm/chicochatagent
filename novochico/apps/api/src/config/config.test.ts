@@ -41,7 +41,7 @@ describe('loadConfig', () => {
         apiKey: undefined,
         chatModel: 'gemini-3.1-flash-lite',
         summaryModel: 'gemini-3.1-flash-lite',
-        insightsModel: 'gemini-2.5-flash',
+        insightsModel: 'gemini-3.1-flash-lite',
       },
       chatCacheEnabled: true,
       glpiPortalUrl: null,
@@ -63,7 +63,7 @@ describe('loadConfig', () => {
       apiKey: 'chave-ficticia',
       chatModel: 'modelo-x',
       summaryModel: 'gemini-3.1-flash-lite',
-      insightsModel: 'gemini-2.5-flash',
+      insightsModel: 'gemini-3.1-flash-lite',
     });
     expect(config.chatCacheEnabled).toBe(false);
     expect(config.glpiPortalUrl).toBe('https://chamados.example.test/');

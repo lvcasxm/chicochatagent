@@ -43,7 +43,7 @@ describe.skipIf(!TEST_DATABASE_URL)('seed', () => {
       publishedBy: null,
     });
     expect(versions[0]?.publishedAt).toBeInstanceOf(Date);
-    expect(versions[0]?.changeSummary).toContain('Pendente de revisão pela SATD');
+    expect(versions[0]?.changeSummary).toContain('três partes');
   });
 
   it('é idempotente: repetir não duplica nem altera nada', async () => {

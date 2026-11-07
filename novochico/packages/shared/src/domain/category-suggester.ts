@@ -65,7 +65,7 @@ const RULES: Array<{ key: string; terms: string[] }> = [
       'impressora fisica',
     ],
   },
-  { key: 'grp', terms: ['sonner', 'grp', 'ouvidoria', 'protocolo grp'] },
+  { key: 'grp', terms: ['sonner', 'grp', 'protocolo grp'] },
   {
     key: 'install',
     terms: [

@@ -489,7 +489,7 @@ Detalha as ADR-018 (métricas) e ADR-030 (instruções do agente).
   4. **Desfechos** são contados à parte, sobre as conversas criadas no período: resolvido (confirmado), escalonado, sem desfecho e em andamento (ainda sem desfecho final). Pessoas e sessões aparecem no funil na mesma ordem do legado.
   5. **Leitura de conversa** só acontece **depois** de a auditoria ser gravada (`conversation.read`, só o identificador); sem registro, sem acesso (S-14). Busca por título, nome, e-mail e setor, 25 por página, com os curingas do `LIKE` tratados como texto.
   6. **CSV** (`GET /api/admin/export/:type?period=`): conversas, mensagens, chamados, eventos e avaliações. BOM UTF-8, `;`, CRLF, e texto que começa com `=`, `+`, `-`, `@`, tab ou CR recebe uma aspa simples na frente (S-15). A auditoria (`export.created`) é gravada antes da primeira linha; os dados saem em lotes de 1000, ordenados por (data, id) com cursor de precisão total, sem repetir nem pular linhas e sem crescer a memória. Inclui a coluna `teste`.
-  7. **Análise IA** (`POST /api/admin/insights`): até 500 conversas (as mais recentes, sem teste e sem apagadas), 4 primeiras falas **da pessoa** de cada uma, `(título) [setor]`, corte em 60.000 caracteres, com aviso de que a amostra foi cortada. Nenhuma fala do agente, nome ou e-mail é enviado. Saída validada por esquema; formato inválido é 502. Auditada (`insights.generated`, só período e quantidade). Modelo: `GEMINI_INSIGHTS_MODEL` (`gemini-2.5-flash`, PEND-17), usado também pelo assistente de instruções. PEND-07 (envio ao Google) segue aberta.
+  7. **Análise IA** (`POST /api/admin/insights`): até 500 conversas (as mais recentes, sem teste e sem apagadas), 4 primeiras falas **da pessoa** de cada uma, `(título) [setor]`, corte em 60.000 caracteres, com aviso de que a amostra foi cortada. Nenhuma fala do agente, nome ou e-mail é enviado. Saída validada por esquema; formato inválido é 502. Auditada (`insights.generated`, só período e quantidade). Modelo: `GEMINI_INSIGHTS_MODEL` (padrão alterado pelo ADR-044), usado também pelo assistente de instruções. PEND-07 (envio ao Google) segue aberta.
   8. **Cards** (`/api/admin/categories`): criar, editar (substitui o card inteiro), apagar, tudo auditado. A chave não muda depois de criada. `external_link` exige endereço `http(s)`; link secundário vem completo ou não vem; mensagem pronta e rótulo curto só valem para `chat`. Conversas antigas guardam a chave como texto e não são afetadas por apagar.
   9. **Instruções:** no máximo um rascunho. Um pedido novo à IA parte do rascunho, se existir; senão, da versão publicada. A resposta é validada (documento não vazio, até 20.000 caracteres, **sem `<<...>>`**); qualquer falha da IA ou da validação **não grava nada**. **A IA nunca publica.** Edição manual valida igual. **Publicar** exige a versão do rascunho que a pessoa viu (`version`): se mudou, 409; em publicações simultâneas uma vence e as outras recebem 409 (rascunho bloqueado na transação, um único publicado garantido pelo índice). Restaurar cria rascunho a partir de uma versão anterior, sem publicar. Publicar e restaurar são auditados. O efeito vale na **próxima mensagem**, porque o chat lê a versão publicada a cada turno; a versão do prompt, e portanto a chave do cache de respostas, muda junto.
   10. **Ensaio** (`POST /api/admin/instructions/draft/rehearse`, SSE): usa o rascunho do servidor, com o histórico enviado pelo cliente (até 20 mensagens). Não grava conversa, mensagem, evento, cache nem chamado. Os marcadores viram eventos `marker` que a tela mostra como avisos. Testa o comportamento de um servidor comum, sem o bloco de bypass.
@@ -538,3 +538,45 @@ Detalha o ADR-028 (banco começa vazio) e o ADR-041 (a API serve a interface).
   - Migrations são só para frente: voltar de versão pode exigir restaurar o backup, com perda do que foi feito depois dele.
   - Os limites por pessoa e a tarefa periódica vivem no processo: uma instância só.
   - **Verificado em Docker:** a imagem constrói (555 MB), roda como `node`, não traz variável de segredo, `.env` nem arquivo de teste, e o `compose.prod.yml` sobe em banco novo (`migrate` termina com 0, `app` fica `healthy` com sistema de arquivos somente leitura e sem capacidades), serve a interface com a CSP, mantém os dados depois de `down` e `up`, e o backup e a verificação funcionam nesse compose. A construção achou dois defeitos, já corrigidos: `tsconfig.base.json` não era copiado e os testes entravam na imagem. A pilha de teste usou IA e GLPI de mentira com `NODE_ENV=development`, porque em produção a aplicação **exige credenciais reais**: a partida em modo de produção com elas não foi exercitada.
+
+## ADR-043 — Tela inicial com quatro atalhos
+
+Altera o Anexo C (cards) e a seção I.6 (tela inicial).
+
+- **Contexto:** a lista de dez cards, cada um com título e descrição, era informação demais para quem só quer pedir ajuda; o campo de mensagem já cobre o resto.
+- **Decisão:**
+  1. A tela inicial mostra **quatro atalhos, em pílulas só com o título**: Computador e Equipamentos, Acessos e Senhas, Sistemas GRP Sonner (link externo, abre em nova aba) e Rede e internet, nessa ordem. Descrição e link secundário (a Ouvidoria do GRP) deixam de aparecer na tela inicial.
+  2. No seed, os demais cards (e-mail, segurança, instalação, impressora, SEI, "Outra coisa?") continuam cadastrados, mas **desativados**. A administração reativa qualquer um em "Cards da tela inicial"; a tela inicial mostra todos os ativos, sem limite fixo no código. Desativado também some das sugestões do campo de mensagem ("Parece sobre…").
+  3. Bancos já semeados não mudam sozinhos (o seed só insere): a troca em um banco existente é feita pela própria administração ou por SQL.
+- **Consequências:** o link da Ouvidoria não aparece mais para o usuário; se for necessário, a SATD pode pô-lo nas instruções do agente ou reativar o card com link próprio. As sugestões por palavra-chave (impressora, e-mail, segurança, instalação) só voltam com os respectivos cards ativos.
+
+## ADR-044 — Modelo do painel: `gemini-3.1-flash-lite`
+
+Resolve a PEND-17 para o modelo do painel.
+
+- **Contexto:** o Google desativou o `gemini-2.5-flash` para novos usuários (404), o que derrubava a Análise IA e o assistente de instruções. O chat e o resumo do chamado já usavam `gemini-3.1-flash-lite` e não foram afetados.
+- **Decisão:** o padrão de `GEMINI_INSIGHTS_MODEL` passa a ser `gemini-3.1-flash-lite`, o mesmo do chat. Em seis pedidos de JSON por modelo, ele e o `gemini-3.5-flash-lite` responderam todos; `gemini-3.6-flash` respondeu 5 (e falhou em sequência em outro teste), `gemini-3.5-flash` respondeu 1, e `gemini-3.7-flash` e `gemini-3.8-flash` só devolveram 503 (alta demanda) nos três pedidos feitos a cada um. Com ele, a Análise IA e o assistente rodaram de verdade: temas válidos, documento revisado e pedido atendido.
+- **Consequências:** é uma medição pontual, não uma garantia. A variável permite trocar de modelo sem mexer no código, e um modelo mais forte pode valer a pena quando a demanda baixar, se a qualidade da análise não bastar. O painel não repete o pedido sozinho: um 503 do Google aparece como erro e a pessoa tenta de novo. Se a IA sair do ar, a edição manual e a publicação continuam.
+
+## ADR-045 — Instruções reorganizadas: comportamento, decisão e procedimentos
+
+Altera a ADR-030 no conteúdo, sem mudar o modelo de duas camadas.
+
+- **Contexto:** o texto herdado repetia em cada assunto o mesmo roteiro, o que levava o agente a repetir perguntas. As regras fixas proibiam abrir chamado sem diagnóstico, o que impedia casos como senha do AD. O atalho escolhido travava a categoria do chamado, e o servidor abria o formulário quando o agente falava em "abrir uma solicitação", mesmo no Sonner.
+- **Decisão:**
+  1. **Um documento só no painel, em três partes:** como atender, decisão e encaminhamento, e procedimentos (só Sonner/GRP, SEI, impressoras com defeito e segurança). Continua um único texto, para manter comparação, assistente, ensaio e histórico.
+  2. **Sem montagem dinâmica nem classificador:** o documento vai inteiro em cada mensagem. Assim o agente muda de assunto no meio da conversa sem nada para errar a escolha.
+  3. **Regras fixas enxutas:** a triagem passa a separar problema, pedido de serviço e outro canal. Entram fora de escopo e "não repetir perguntas". Sai a frase obrigatória de escalonamento.
+  4. **Nome, setor e IP:** continuam no formulário, nunca no chat. Além do topo do chamado, passam a entrar na seção "Contexto" do resumo. Entram no servidor, depois da IA, para o nome e o IP não irem ao provedor; o setor já fazia parte do prompt do resumo.
+  5. **Resumo:** regras para pedido de acesso ao Sonner (módulo, funcionalidade e motivo), impressora com defeito físico (repasse à Repros) e pedido de serviço. A contingência leva as demais falas da pessoa, para um dado curto como o módulo não se perder.
+  6. **Categoria do atalho vira sugestão:** vale a que a IA escolher entre as permitidas.
+  7. **Formulário:** "abrir uma solicitação" deixa de liberar, e nenhuma frase de abertura libera se citar Sonner, GRP ou SEI. Quem libera é o marcador; a frase é só a contingência.
+  8. **Atalho do Sonner abre conversa,** em vez do PDF, porque é nela que se pede acesso a um módulo. A Ouvidoria sai das instruções e do card.
+  9. **`npm run eval:chat`:** os cenários do Anexo D, com o Gemini real, fora de `npm test`.
+  10. **Pergunta e formulário nunca juntos:** regra fixa, conferida pela suíte. O ensaio mostrou respostas que perguntavam e liberavam o formulário ao mesmo tempo. Impressora com defeito físico abre direto, sem perguntar o modelo.
+  11. O teste que proíbe o domínio da Prefeitura no código abre exceção só para `suporte.sei@` e `sei.`, canais públicos citados nas instruções.
+- **Consequências e riscos:**
+  - Bancos com versão publicada não mudam sozinhos: o texto novo entra pelo painel, e os cards por lá ou por SQL.
+  - A suíte depende do modelo, que varia entre execuções: um cenário pode falhar uma vez e passar na seguinte. Falha repetida indica problema de instrução.
+  - O endereço do site de suporte ao SEI não é conhecido: o agente cita só o nome, dentro da intranet.
+  - `https://sei.pedroleopoldo.mg.gov.br` não respondeu de fora da rede da Prefeitura durante a construção; o endereço foi informado pelo responsável.

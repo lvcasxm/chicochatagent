@@ -29,10 +29,11 @@ export function isAdminTestShortcut(text: string): boolean {
 
 /**
  * Frases de escalonamento. Se a IA se esqueceu do marcador mas anunciou o chamado, o
- * formulário abre do mesmo jeito (fallback do legado).
+ * formulário abre do mesmo jeito (fallback do legado). Orientar um registro em outro canal
+ * ("abra um chamado no Sonner") não conta: nesse caso o chamado não é do GLPI (ADR-045).
  */
 const ESCALATION_PHRASE =
-  /(vou abrir (um )?chamado|abrir (um )?chamado para o suporte|encaminhar para o suporte t[eé]cnico|abrir uma solicita[cç][aã]o)/i;
+  /(vou abrir (um )?chamado|abrir (um )?chamado para o suporte|encaminhar para o suporte t[eé]cnico)(?![^.!?\n]*\b(sonner|grp|sei)\b)/i;
 
 export function hasEscalationPhrase(text: string): boolean {
   return ESCALATION_PHRASE.test(text);

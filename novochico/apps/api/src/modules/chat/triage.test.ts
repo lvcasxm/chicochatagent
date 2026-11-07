@@ -63,7 +63,6 @@ describe('hasEscalationPhrase', () => {
     'Como não conseguimos resolver por aqui, vou abrir um chamado para o suporte técnico.',
     'Vou abrir chamado agora.',
     'Vou encaminhar para o suporte técnico.',
-    'Posso abrir uma solicitação para você.',
     'vou abrir um chamado',
     'Vou encaminhar para o suporte tecnico.',
   ])('"%s" escala', (text) => {
@@ -72,6 +71,14 @@ describe('hasEscalationPhrase', () => {
 
   it.each([
     'Reinicie o computador e tente de novo.',
+    'Posso abrir uma solicitação no Sonner para você.',
+    'Registre direto no Sonner: abra um chamado por lá.',
+    'Vou abrir um chamado no Sonner para isso.',
+    'Vou abrir chamado pelo GRP.',
+    'Posso abrir uma solicitação no Sonner para você.',
+    'Registre direto no Sonner: abra um chamado por lá.',
+    'Vou abrir um chamado no Sonner para isso?',
+    'Vou abrir chamado pelo GRP.',
     'Você pode abrir o painel de controle.',
     'Qual é o equipamento com o problema?',
   ])('"%s" não escala', (text) => {

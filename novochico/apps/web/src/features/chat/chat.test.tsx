@@ -158,9 +158,10 @@ describe('tela inicial', () => {
     const sei = await screen.findByRole('link', { name: /dúvidas referentes ao sei/i });
     expect(sei.getAttribute('target')).toBe('_blank');
     expect(sei.getAttribute('rel')).toBe('noopener noreferrer');
-    expect(screen.getByRole('link', { name: /ouvidoria/i }).getAttribute('href')).toBe(
-      'https://ouvidoria.example.test',
-    );
+    // Só o título: a tela inicial não mostra descrição nem link secundário dos atalhos.
+    expect(screen.queryByRole('link', { name: /ouvidoria/i })).toBeNull();
+    const shortcuts = screen.getByRole('region', { name: 'Atalhos' });
+    expect(shortcuts.querySelectorAll('li').length).toBe(2);
     expect(screen.getByRole('link', { name: /sou usuário avançado/i }).getAttribute('href')).toBe(
       PORTAL,
     );

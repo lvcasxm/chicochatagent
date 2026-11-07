@@ -848,7 +848,7 @@ describe.skipIf(!TEST_DATABASE_URL)('chat: conversas e mensagens', () => {
   describe('categorias, títulos e eventos', () => {
     it('conversa iniciada por um card registra os eventos de início e de categoria', async () => {
       const who = await actor();
-      const id = await newConversation(who, 'printer');
+      const id = await newConversation(who, 'hardware');
       const events = await orm()
         .select()
         .from(analyticsEvents)
@@ -857,13 +857,13 @@ describe.skipIf(!TEST_DATABASE_URL)('chat: conversas e mensagens', () => {
         'category_detected',
         'conversation_started',
       ]);
-      expect(events.every((e) => e.category === 'printer')).toBe(true);
+      expect(events.every((e) => e.category === 'hardware')).toBe(true);
       expect(events.every((e) => JSON.stringify(e.metadata) === '{}')).toBe(true);
     });
 
     it('categoria inexistente, oculta ou de link externo: 422', async () => {
       const who = await actor();
-      for (const categoryKey of ['nao-existe', 'access', 'sei', 'grp']) {
+      for (const categoryKey of ['nao-existe', 'access', 'sei']) {
         const response = await app.inject({
           method: 'POST',
           url: '/api/conversations',
@@ -875,14 +875,14 @@ describe.skipIf(!TEST_DATABASE_URL)('chat: conversas e mensagens', () => {
     });
 
     it('mensagem pronta do card vira o rótulo curto, e a descrição real vira o título', async () => {
-      useScript([['Qual impressora?'], ['Certo.'], ['Certo.']]);
+      useScript([['Qual equipamento?'], ['Certo.'], ['Certo.']]);
       const who = await actor();
-      const id = await newConversation(who, 'printer');
+      const id = await newConversation(who, 'hardware');
       const canned =
-        'Olá! Estou com problemas na impressora do meu setor — não está imprimindo ou ficou offline. Pode me ajudar a resolver?';
+        'Olá! Estou com um problema no meu computador ou equipamento de trabalho — pode estar lento, travando ou apresentando defeito. Pode me ajudar a investigar?';
 
       const first = await send(who, id, canned);
-      expect(dataOf<{ title: string }>(first.events, 'done')?.title).toBe('Impressora');
+      expect(dataOf<{ title: string }>(first.events, 'done')?.title).toBe('Computador/equipamento');
 
       const second = await send(who, id, 'o papel fica atolando na bandeja dois');
       expect(dataOf<{ title: string }>(second.events, 'done')?.title).toBe(
@@ -1085,7 +1085,8 @@ describe.skipIf(!TEST_DATABASE_URL)('chat: conversas e mensagens', () => {
         );
       const asUser = await fetch(user);
       expect(asUser.cards.map((c) => c.key)).not.toContain('access');
-      expect(asUser.cards.map((c) => c.key)).toContain('printer');
+      // A tela inicial mostra só os quatro atalhos principais, nesta ordem.
+      expect(asUser.cards.map((c) => c.key)).toEqual(['hardware', 'password', 'grp', 'network']);
       expect(asUser.glpiPortalUrl).toBe('https://chamados.example.test/');
       expect(asUser.canUseTestMode).toBe(false);
       expect((await fetch(admin)).canUseTestMode).toBe(true);

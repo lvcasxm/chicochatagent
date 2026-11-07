@@ -31,7 +31,7 @@ import {
 } from './duplicate-detection';
 import { buildFallbackSummary, buildTestSummary } from './fallback-summary';
 import type { TicketAttemptRow, TicketsRepository } from './repository';
-import { summarizeWithLlm, type TicketSummary } from './summary';
+import { summarizeWithLlm, withRequesterContext, type TicketSummary } from './summary';
 
 export interface TicketActor {
   id: string;
@@ -169,7 +169,7 @@ export function createTicketsService(deps: TicketsServiceDeps) {
   }
 
   /** Categoria travada pelo card (RF-041): o título do card, que é o nome da categoria do chamado. */
-  async function lockedCategoryOf(row: ConversationRow): Promise<string | null> {
+  async function cardCategoryOf(row: ConversationRow): Promise<string | null> {
     if (!row.categoryKey) return null;
     const categories = await content.listChatCategories();
     return categories.find((category) => category.key === row.categoryKey)?.title ?? null;
@@ -178,7 +178,7 @@ export function createTicketsService(deps: TicketsServiceDeps) {
   async function currentCase(row: ConversationRow): Promise<CurrentCase> {
     const transcript = await conversations.transcript(row.id);
     return {
-      category: await lockedCategoryOf(row),
+      category: await cardCategoryOf(row),
       userMessages: transcript.filter((line) => line.role === 'user').map((line) => line.content),
     };
   }
@@ -365,7 +365,7 @@ export function createTicketsService(deps: TicketsServiceDeps) {
 
       const at = now();
       const transcript = await conversations.transcript(conversationId);
-      const lockedCategory = await lockedCategoryOf(row);
+      const cardCategory = await cardCategoryOf(row);
       const cannedMessages = (await content.listChatCategories()).flatMap((category) =>
         category.cannedMessage ? [category.cannedMessage] : [],
       );
@@ -381,21 +381,29 @@ export function createTicketsService(deps: TicketsServiceDeps) {
           ? await summarizeWithLlm({
               llm: summaryLlm,
               sector: request.sector,
-              lockedCategory,
+              cardCategory,
               transcript,
               signal: input.signal,
               onFailure: (n, error) =>
                 logger.warn({ err: error, attempt: n, conversationId }, 'Resumo do chamado falhou'),
             })
           : null;
-        summary =
+        const consolidated =
           fromLlm ??
           buildFallbackSummary({
             sector: request.sector,
-            lockedCategory,
+            cardCategory,
             transcript,
             cannedMessages,
           });
+        summary = {
+          ...consolidated,
+          description: withRequesterContext(consolidated.description, {
+            requesterName: actor.fullName,
+            sector: request.sector,
+            machineIp: request.ipUnavailable ? null : (request.machineIp ?? null),
+          }),
+        };
       }
 
       // Retrato da conversa para o técnico, com link que exige login (RF-055, ADR-016). Chamado de

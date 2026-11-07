@@ -401,7 +401,9 @@ describe.skipIf(!TEST_DATABASE_URL)('chamados: abertura no GLPI', () => {
       expect(ticket?.content).toContain('**Setor do solicitante:** Secretaria de Saúde');
       expect(ticket?.content).toContain('**IP da máquina:** 10.1.2.30');
       expect(ticket?.content).toContain('**Categoria:** Outra coisa?');
-      expect(ticket?.content).toContain(SECTIONS);
+      expect(ticket?.content).toContain(
+        SECTIONS.replace('Contexto:\n', 'Contexto:\nSolicitante: Maria Silva Santos. Setor: Secretaria de Saúde. IP da máquina: 10.1.2.30.\n'),
+      );
       expect(ticket?.content).not.toContain('RESPOSTA-DO-BOT');
       expect(glpiFake.attached).toEqual([{ ticketId: '1000', requesterId: 7 }]);
 
@@ -436,7 +438,7 @@ describe.skipIf(!TEST_DATABASE_URL)('chamados: abertura no GLPI', () => {
       );
     });
 
-    it('a IA recebe o setor e a conversa, e a categoria do card é respeitada (RF-041)', async () => {
+    it('a IA recebe o setor e a conversa, sem o nome e o IP, e a categoria dela vence a do card (ADR-045)', async () => {
       const who = await actor();
       const id = await conversationOf(who, { categoryKey: 'network' });
       await open(who, id);
@@ -444,8 +446,9 @@ describe.skipIf(!TEST_DATABASE_URL)('chamados: abertura no GLPI', () => {
       expect(call?.user).toContain('Setor do usuário: Secretaria de Saúde');
       expect(call?.user).toContain('USUÁRIO: A internet caiu em todo o setor desde cedo');
       expect(call?.user).toContain('BOT: RESPOSTA-DO-BOT-NA-TRANSCRICAO');
-      expect((await attempts())[0]?.category).toBe('Rede e internet');
-      expect(glpiFake.tickets[0]?.content).toContain('**Categoria:** Rede e internet');
+      expect(JSON.stringify(call)).not.toMatch(/Maria|10\.1\.2\.30/);
+      expect((await attempts())[0]?.category).toBe('Outra coisa?');
+      expect(glpiFake.tickets[0]?.content).toContain('**Categoria:** Outra coisa?');
     });
 
     it('solicitante não encontrado no GLPI não bloqueia o chamado', async () => {
