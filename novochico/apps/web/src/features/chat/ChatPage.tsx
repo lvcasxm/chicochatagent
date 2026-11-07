@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useAuth } from '../../app/auth/AuthContext';
 import { AppShell } from '../../app/layouts/AppShell';
+import { TruncatedText } from '../../components/TruncatedText';
 import { Button, ButtonLink } from '../../components/Button';
 import { ErrorState } from '../../components/ErrorState';
 import { Notice } from '../../components/Notice';
@@ -107,7 +108,7 @@ export function ChatPage() {
   } else {
     content = (
       <div className="flex min-h-[60dvh] flex-col gap-6">
-        {chat.title && <h1 className="type-title-3 truncate">{chat.title}</h1>}
+        {chat.title && <TruncatedText as="h1" text={chat.title} className="type-title-3" />}
         <MessageList messages={chat.messages} waiting={chat.status === 'sending'} />
 
         {chat.failure && (
