@@ -314,3 +314,5 @@ flowchart LR
 **Testes:** partida em banco limpo com migrations e seed; restauração de backup.
 
 **Riscos:** links de transcrição em chamados antigos e o destino dos dados pessoais do sistema antigo (`PEND-07`).
+
+**Situação:** artefatos prontos (ADR-042, `docs/OPERATIONS.md`), **sem deploy**. Falta a aprovação do plano de virada, as PEND-07 e PEND-08, e as verificações com credenciais reais.
