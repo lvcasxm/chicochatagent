@@ -48,8 +48,6 @@ export const MESSAGES = {
   testShortcut: 'Modo de teste: o formulário de chamado foi liberado para você, administrador.',
 } as const;
 
-/** Mensagens por minuto, por usuário. Passar disso é quase sempre um erro de programa, não uso. */
-const MESSAGES_PER_MINUTE = 20;
 /** Respostas do cache saem em blocos curtos, como um stream de verdade. */
 const CACHE_CHUNK_SIZE = 48;
 
@@ -91,18 +89,6 @@ export function createChatService(deps: ChatServiceDeps) {
 
   /** Conversas com um turno em andamento: duas respostas ao mesmo tempo se embaralhariam. */
   const busyConversations = new Set<string>();
-  const recentByUser = new Map<string, number[]>();
-
-  function checkRateLimit(userId: string): void {
-    const at = now().getTime();
-    const recent = (recentByUser.get(userId) ?? []).filter((time) => at - time < 60_000);
-    if (recent.length >= MESSAGES_PER_MINUTE) {
-      recentByUser.set(userId, recent);
-      throw new AppError('RATE_LIMITED', 429, MESSAGES.rateLimited, { retryAfterSeconds: 10 });
-    }
-    recent.push(at);
-    recentByUser.set(userId, recent);
-  }
 
   /** Falha em registrar métrica nunca derruba o atendimento. */
   async function record(...args: Parameters<AnalyticsService['record']>): Promise<void> {
@@ -197,7 +183,6 @@ export function createChatService(deps: ChatServiceDeps) {
       const isAdmin = actor.role === 'admin';
 
       let row = await conversations.requireOwned(conversationId, actor.id);
-      checkRateLimit(actor.id);
 
       if (busyConversations.has(conversationId)) {
         throw new AppError('TURN_IN_PROGRESS', 409, MESSAGES.turnInProgress);

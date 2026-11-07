@@ -7,6 +7,7 @@ import {
   type TicketCheckResponse,
 } from '@chicochat/shared';
 import { requireAuth } from '../../http/auth';
+import type { UserRateLimiter } from '../../http/user-rate-limit';
 import { AppError } from '../../lib/errors';
 import { parseInput } from '../../lib/validation';
 import type { TicketsService } from './service';
@@ -24,19 +25,23 @@ function conversationId(params: unknown): string {
 
 export function registerTicketsRoutes(
   app: FastifyInstance,
-  deps: { tickets: TicketsService },
+  deps: { tickets: TicketsService; limits: UserRateLimiter },
 ): void {
   const guarded = { config: { requiresPrivacyAck: true } } as const;
 
   /** Chamados do usuário logado, achados pelo e-mail da sessão (RF-050). Nada vem do cliente. */
-  app.get('/api/tickets/mine', guarded, async (request): Promise<MyTicketsResponse> => {
-    const { user } = requireAuth(request);
-    return deps.tickets.listMine({ id: user.id, email: user.email });
-  });
+  app.get(
+    '/api/tickets/mine',
+    { ...guarded, preHandler: deps.limits.guard('ticketsMine') },
+    async (request): Promise<MyTicketsResponse> => {
+      const { user } = requireAuth(request);
+      return deps.tickets.listMine({ id: user.id, email: user.email });
+    },
+  );
 
   app.post(
     '/api/conversations/:id/ticket-check',
-    guarded,
+    { ...guarded, preHandler: deps.limits.guard('ticketCheck') },
     async (request): Promise<TicketCheckResponse> => {
       const { user } = requireAuth(request);
       return deps.tickets.check(
@@ -48,7 +53,7 @@ export function registerTicketsRoutes(
 
   app.post(
     '/api/conversations/:id/tickets',
-    guarded,
+    { ...guarded, preHandler: deps.limits.guard('ticketCreate') },
     async (request, reply): Promise<CreateTicketResponse> => {
       const { user } = requireAuth(request);
       const id = conversationId(request.params);

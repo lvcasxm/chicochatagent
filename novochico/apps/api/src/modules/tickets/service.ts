@@ -195,6 +195,17 @@ export function createTicketsService(deps: TicketsServiceDeps) {
   }
 
   return {
+    /**
+     * Tarefa periódica: tentativa `pending` com mais de `maxAgeMs` foi abandonada (o processo caiu).
+     * Vira `unknown`, nunca é reenviada sozinha (ADR-037); aparece na lista de falhas do painel.
+     */
+    async expireStalePending(maxAgeMs: number): Promise<number> {
+      const at = now();
+      const expired = await repository.expireStale(new Date(at.getTime() - maxAgeMs), at);
+      if (expired > 0) logger.warn({ expired }, 'Tentativas de chamado abandonadas');
+      return expired;
+    },
+
     /** Último setor usado, para pré-preencher o formulário (RF-032). */
     lastSector: (userId: string) => repository.lastSector(userId),
 

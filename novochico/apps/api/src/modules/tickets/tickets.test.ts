@@ -287,6 +287,8 @@ describe.skipIf(!TEST_DATABASE_URL)('chamados: abertura no GLPI', () => {
       }
       expect(glpiFake.creates()).toBe(0);
 
+      // As cinco tentativas inválidas gastaram o limite de abertura (5 por 10 minutos).
+      clock.advance(11 * MINUTE);
       expect((await open(who, id)).status).toBe(201);
       const [saved] = await attempts();
       expect(saved).toMatchObject({
@@ -598,7 +600,7 @@ describe.skipIf(!TEST_DATABASE_URL)('chamados: abertura no GLPI', () => {
       const who = await actor();
       const id = await conversationOf(who);
       const key = newKey();
-      const results = await Promise.all(Array.from({ length: 6 }, () => open(who, id, BODY, key)));
+      const results = await Promise.all(Array.from({ length: 5 }, () => open(who, id, BODY, key)));
 
       expect(glpiFake.creates()).toBe(1);
       expect(await attempts()).toHaveLength(1);
@@ -608,6 +610,7 @@ describe.skipIf(!TEST_DATABASE_URL)('chamados: abertura no GLPI', () => {
       expect(statuses.every((s) => s === 201 || s === 200 || s === 409)).toBe(true);
 
       // Terminada a primeira, repetir devolve o resultado gravado.
+      clock.advance(11 * MINUTE);
       const replay = await open(who, id, BODY, key);
       expect(replay.status).toBe(200);
       expect(replay.body.ticketId).toBe('1000');
@@ -696,6 +699,51 @@ describe.skipIf(!TEST_DATABASE_URL)('chamados: abertura no GLPI', () => {
       expect(output).not.toContain(who.user.email);
       expect(output).not.toContain('Maria Silva Santos');
       expect(output).not.toContain('A internet caiu em todo o setor');
+    });
+  });
+
+  describe('tentativas abandonadas', () => {
+    async function insertAttempt(
+      who: Actor,
+      conversation: string,
+      status: 'pending' | 'success',
+      ageMinutes: number,
+    ) {
+      await orm()
+        .insert(ticketAttempts)
+        .values({
+          conversationId: conversation,
+          userId: who.user.id,
+          idempotencyKey: newKey(),
+          status,
+          glpiTicketId: status === 'success' ? '555' : null,
+          requesterName: 'x',
+          requesterEmail: who.user.email,
+          sector: 'Saúde',
+          ipUnavailable: true,
+          createdAt: new Date(clock.now().getTime() - ageMinutes * MINUTE),
+        });
+    }
+
+    it('pending antiga vira unknown (sem reenvio); a recente e as finalizadas ficam como estão', async () => {
+      const who = await actor();
+      const id = await conversationOf(who);
+      await insertAttempt(who, id, 'pending', 30);
+      await insertAttempt(who, id, 'pending', 2);
+      await insertAttempt(who, id, 'success', 60);
+
+      expect(await app.jobs.expireStaleTicketAttempts()).toBe(1);
+      const rows = await attempts();
+      expect(rows.map((r) => r.status).sort()).toEqual(['pending', 'success', 'unknown']);
+      const abandoned = rows.find((r) => r.status === 'unknown');
+      expect(abandoned?.errorCode).toBe('ABANDONED');
+      expect(glpiFake.creates()).toBe(0);
+
+      // Repetir a varredura não muda mais nada.
+      expect(await app.jobs.expireStaleTicketAttempts()).toBe(0);
+      // A recente expira quando passa do prazo.
+      clock.advance(9 * MINUTE);
+      expect(await app.jobs.expireStaleTicketAttempts()).toBe(1);
     });
   });
 

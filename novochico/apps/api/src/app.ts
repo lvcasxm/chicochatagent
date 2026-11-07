@@ -6,6 +6,9 @@ import type { Config } from './config';
 import type { Database } from './db/client';
 import { registerAuth } from './http/auth';
 import { registerCsrfProtection } from './http/csrf';
+import { registerSecurityHeaders } from './http/security';
+import { createUserRateLimiter } from './http/user-rate-limit';
+import { registerWebAssets, type SpaFallback } from './http/web-assets';
 import { registerErrorHandling } from './http/error-handler';
 import { registerHealthRoute } from './http/health';
 import { registerRouteCatalog } from './http/route-catalog';
@@ -38,9 +41,15 @@ import { registerUsersRoutes } from './modules/users/routes';
 declare module 'fastify' {
   interface FastifyInstance {
     /** Tarefas que rodam fora das requisições (RF-064). */
-    jobs: { closeInactiveConversations: () => Promise<number> };
+    jobs: {
+      closeInactiveConversations: () => Promise<number>;
+      expireStaleTicketAttempts: () => Promise<number>;
+    };
   }
 }
+
+/** Tentativa de chamado `pending` por mais que isto foi abandonada. */
+const STALE_ATTEMPT_MS = 10 * 60_000;
 
 export interface AppDeps {
   config: Config;
@@ -96,14 +105,17 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   registerRouteCatalog(app);
-  registerErrorHandling(app);
+  let spaFallback: SpaFallback | null = null;
+  registerErrorHandling(app, { spaFallback: () => spaFallback });
 
+  await registerSecurityHeaders(app, { secure: isSecureOrigin(config.appOrigin) });
   await app.register(cookie, { secret: config.sessionSecret });
   // Limite geral por IP (seção K); as rotas de login têm um limite próprio, mais baixo.
   await app.register(rateLimit, { global: true, max: 600, timeWindow: '1 minute' });
   registerCsrfProtection(app, { allowedOrigin: config.appOrigin });
 
   const now = deps.now ?? (() => new Date());
+  const limits = createUserRateLimiter({ now });
   const users = createUsers({ orm: deps.db.orm, now });
   const sessions = createSessionService({ orm: deps.db.orm, users, now });
   const oidc =
@@ -157,8 +169,8 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
     glpiPortalUrl: config.glpiPortalUrl,
     lastSector: (userId) => tickets.lastSector(userId),
   });
-  registerChatRoutes(app, { chat, conversations });
-  registerTicketsRoutes(app, { tickets });
+  registerChatRoutes(app, { chat, conversations, limits });
+  registerTicketsRoutes(app, { tickets, limits });
   registerTranscriptRoutes(app, { transcripts });
 
   const feedback = createFeedback({
@@ -181,6 +193,7 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
     metrics: createMetrics({ orm: deps.db.orm, now }),
     instructions: contentAdmin.instructions,
     categories: contentAdmin.categories,
+    limits,
     rehearsal: createRehearsal({
       llm: deps.llm !== undefined ? deps.llm : configuredLlm.llm,
       logger: deps.logger,
@@ -188,9 +201,18 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
     now,
   });
 
+  // A interface vai por último: nenhuma rota dela pode esconder uma da API.
+  if (config.webDistDir) {
+    spaFallback = await registerWebAssets(app, { distDir: config.webDistDir });
+  }
+
   // Tarefas periódicas: o `server.ts` as agenda; os testes as chamam direto, com o tempo controlado.
   const closer = createSessionCloser({ conversations, analytics, logger: deps.logger });
-  app.decorate('jobs', { closeInactiveConversations: () => closer.closeInactive() });
+  app.decorate('jobs', {
+    closeInactiveConversations: () => closer.closeInactive(),
+    // 10 minutos passam de qualquer espera legítima (GLPI e resumo têm prazos de segundos).
+    expireStaleTicketAttempts: () => tickets.expireStalePending(STALE_ATTEMPT_MS),
+  });
 
   return app;
 }

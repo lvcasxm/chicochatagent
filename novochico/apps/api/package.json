@@ -15,7 +15,9 @@
   "dependencies": {
     "@chicochat/shared": "*",
     "@fastify/cookie": "^11.1.5",
+    "@fastify/helmet": "^13.2.0",
     "@fastify/rate-limit": "^11.2.2",
+    "@fastify/static": "^10.1.10",
     "@google/genai": "^3.0.0",
     "drizzle-orm": "^0.45.4",
     "fastify": "^5.12.8",

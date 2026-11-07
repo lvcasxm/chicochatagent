@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { AppError } from '../lib/errors';
 
 /** Formato único de erro: `{ error: { code, message } }`, com `message` sempre segura. */
@@ -31,8 +31,15 @@ function statusOf(error: unknown): number | undefined {
   return undefined;
 }
 
-export function registerErrorHandling(app: FastifyInstance): void {
-  app.setNotFoundHandler((_request, reply) => {
+export function registerErrorHandling(
+  app: FastifyInstance,
+  deps: {
+    /** Endereço da interface (rota do navegador) não é um erro: devolve o índice e diz que tratou. */
+    spaFallback?: () => ((request: FastifyRequest, reply: FastifyReply) => boolean) | null;
+  } = {},
+): void {
+  app.setNotFoundHandler((request, reply) => {
+    if (deps.spaFallback?.()?.(request, reply)) return reply;
     return reply.status(404).send({ error: NOT_FOUND } satisfies ErrorBody);
   });
 

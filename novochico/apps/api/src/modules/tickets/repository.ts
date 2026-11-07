@@ -1,4 +1,4 @@
-import { and, desc, eq, gte } from 'drizzle-orm';
+import { and, desc, eq, gte, lt } from 'drizzle-orm';
 import type { DbExecutor } from '../../db/client';
 import { ticketAttempts } from '../../db/schema';
 
@@ -69,6 +69,24 @@ export function createTicketsRepository(db: DbExecutor) {
         .where(and(eq(ticketAttempts.id, id), eq(ticketAttempts.status, 'pending')))
         .returning();
       return row ?? null;
+    },
+
+    /**
+     * Tentativas que ficaram `pending` além do prazo: o processo caiu entre gravar a tentativa e
+     * guardar o resultado. Viram `unknown`, porque o chamado pode existir no GLPI.
+     */
+    async expireStale(cutoff: Date, now: Date): Promise<number> {
+      const rows = await db
+        .update(ticketAttempts)
+        .set({
+          status: 'unknown',
+          errorCode: 'ABANDONED',
+          errorDetail: 'O processo foi interrompido antes de registrar o resultado.',
+          updatedAt: now,
+        })
+        .where(and(eq(ticketAttempts.status, 'pending'), lt(ticketAttempts.createdAt, cutoff)))
+        .returning({ id: ticketAttempts.id });
+      return rows.length;
     },
 
     /** Chamados abertos do usuário (sem os de teste), do mais recente para o mais antigo. */

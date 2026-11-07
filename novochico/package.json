@@ -16,15 +16,17 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p e2e",
     "test": "npm run test --workspaces --if-present",
     "db:generate": "npm run db:generate -w @chicochat/api",
     "db:migrate": "npm run db:migrate -w @chicochat/api",
     "db:seed": "npm run db:seed -w @chicochat/api",
-    "admin:grant": "npm run admin:grant -w @chicochat/api --"
+    "admin:grant": "npm run admin:grant -w @chicochat/api --",
+    "e2e": "playwright test -c e2e/playwright.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.0",
     "concurrently": "^10.0.6",
     "eslint": "^10.14.0",
     "eslint-plugin-react-hooks": "^7.1.1",

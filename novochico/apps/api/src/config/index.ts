@@ -67,6 +67,10 @@ const envSchema = z
       .default('false')
       .transform((value) => value === 'true'),
 
+    // Pasta do build da interface (apps/web/dist). Quando definida, a API serve a interface na mesma
+    // origem, com os cabeçalhos de segurança; sem ela (desenvolvimento), quem serve é o Vite.
+    WEB_DIST_DIR: z.string().min(1).optional(),
+
     DATABASE_URL: z.string().refine(isPostgresUrl),
     // Usuário com direito de alterar o schema, usado só por `npm run db:migrate`. Opcional.
     DATABASE_MIGRATION_URL: z.string().refine(isPostgresUrl).optional(),
@@ -201,6 +205,8 @@ export type Config = {
   port: number;
   logLevel: (typeof LOG_LEVELS)[number];
   trustProxy: boolean;
+  /** Build da interface a servir, ou nulo. */
+  webDistDir: string | null;
   databaseUrl: string;
   databaseMigrationUrl: string | undefined;
   /** Origem pública (esquema + host + porta), sem barra final. */
@@ -254,6 +260,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     port: data.PORT,
     logLevel: data.LOG_LEVEL,
     trustProxy: data.TRUST_PROXY,
+    webDistDir: data.WEB_DIST_DIR ?? null,
     databaseUrl: data.DATABASE_URL,
     databaseMigrationUrl: data.DATABASE_MIGRATION_URL,
     appOrigin: new URL(data.APP_PUBLIC_URL).origin,
