@@ -142,7 +142,8 @@ O sistema antigo continua em produção até a validação do novo.
 - [ ] Servidor pronto, domínio e certificado definidos (PEND-08).
 - [ ] Decisão sobre envio das falas ao Google, retenção e aviso de privacidade (PEND-07).
 - [ ] Credenciais reais no `deploy/production.env`; login do Google funcionando.
-- [ ] Verificações com credenciais reais feitas (seção 9), inclusive a abertura de um chamado de teste no GLPI **com você presente** (PEND-05).
+- [ ] Verificações com credenciais reais feitas (seção 9).
+- [x] Abertura de chamado real no GLPI (PEND-05). Verificada em 07/11/2026 com o responsável: três chamados reais chegaram ao GLPI com número, solicitante vinculado, resumo da IA e link da conversa.
 - [ ] Backup e restauração testados no servidor novo (`verify-backup.sh` com "OK").
 - [ ] Primeiro administrador criado e pessoas da SATD com papel `tecnico` (PEND-10).
 
@@ -189,7 +190,7 @@ Nada disto foi possível durante a construção, que usou IA e GLPI de mentira. 
 
 1. **Login Google:** entrar com uma conta institucional; uma conta de outro domínio é recusada.
 2. **Gemini:** uma conversa real recebe resposta em stream; rodar a suíte de avaliação do agente (`npm run eval:chat`, Anexo D) e conferir o caso S7 (regras fixas prevalecem sobre instruções conflitantes).
-3. **GLPI (PEND-05):** abrir **um chamado de teste** com você presente, conferir título, descrição, solicitante, categoria e o link da conversa; conferir "Meus chamados" para a mesma pessoa; conferir o que um `tecnico` vê ao abrir o link.
+3. **GLPI (PEND-05):** abertura verificada em 07/11/2026 com o responsável: três chamados reais chegaram ao GLPI com número, solicitante vinculado, resumo da IA e link da conversa. Falta conferir "Meus chamados" para a mesma pessoa e o que um `tecnico` vê ao abrir o link.
 4. **Painel:** "Pedir uma mudança" nas instruções (assistente), "Ensaiar" e "Análise por IA" com dados reais.
 5. **Cabeçalhos:** `curl -sI https://<endereço>/` deve mostrar a política de conteúdo e o HSTS.
 6. **Backup:** `backup.sh` e `verify-backup.sh` no servidor.
@@ -198,7 +199,7 @@ Nada disto foi possível durante a construção, que usou IA e GLPI de mentira. 
 
 | Item | O que falta |
 |---|---|
-| PEND-05 | Confirmar o formato real das respostas do GLPI |
+| PEND-05 | Abertura de chamado verificada (07/11/2026). Falta confirmar a listagem de "Meus chamados" com respostas reais |
 | PEND-07 | Retenção, base legal, envio de falas ao Google e destino dos dados do sistema antigo |
 | PEND-08 | Servidor, domínio, TLS, saída de rede e política de backup |
 | PEND-10 | Contas dos técnicos e papel `tecnico` |

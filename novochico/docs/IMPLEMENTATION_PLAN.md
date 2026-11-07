@@ -196,7 +196,9 @@ flowchart LR
 
 **Riscos:** contrato de `TeamMember` e campos da instância; versão da API.
 
-**Situação:** implementada com fakes (ADR-037). **Não verificado:** o contrato real do GLPI (PEND-05), a homologação em Docker e qualquer abertura real. Nenhuma credencial foi usada.
+**Situação:** implementada com fakes (ADR-037). **Não verificado** na época: o contrato real do GLPI (PEND-05), a homologação em Docker e qualquer abertura real. Nenhuma credencial foi usada.
+
+**Atualização (07/11/2026):** abertura real verificada com o responsável: três chamados reais chegaram ao GLPI com número, solicitante vinculado, resumo da IA e link da conversa.
 
 ---
 
