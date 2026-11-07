@@ -9,6 +9,10 @@ import { cx } from '../lib/cx';
  * Assinaturas da marca (identidade, seção I.4). Os arquivos são os oficiais, sem recolorir,
  * distorcer nem recortar a assinatura: a versão certa para cada tema entra por CSS, sem trocar
  * de arquivo depois da primeira pintura.
+ *
+ * Única correção feita por decisão do responsável: na versão para fundo claro (`logo-vertical-dark`) os
+ * óculos eram pretos; agora são brancos, como a boina e como no símbolo, e os detalhes azuis das
+ * lentes continuam.
  */
 export interface LogoProps {
   /**
