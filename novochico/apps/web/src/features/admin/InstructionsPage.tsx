@@ -45,6 +45,7 @@ function Diff({ before, after }: { before: string; after: string }) {
       <div
         role="group"
         aria-label="Diferenças entre o texto em uso e o rascunho"
+        tabIndex={0}
         className="type-small max-h-[32rem] overflow-auto rounded-lg border border-border"
       >
         {items.map((item, index) =>
@@ -371,7 +372,11 @@ function History({
         footer={<Button onClick={() => setShown(null)}>Fechar</Button>}
       >
         {shown && (
-          <pre className="type-small max-h-96 overflow-auto rounded-lg bg-surface p-4 break-words whitespace-pre-wrap">
+          <pre
+            tabIndex={0}
+            aria-label={`Texto da versão ${shown.version}`}
+            className="type-small max-h-96 overflow-auto rounded-lg bg-surface p-4 break-words whitespace-pre-wrap"
+          >
             {shown.content}
           </pre>
         )}
@@ -479,7 +484,11 @@ function Workspace({ initial, reload }: { initial: InstructionsState; reload: ()
         </p>
         <details>
           <summary className="type-small cursor-pointer">Ler o texto em uso</summary>
-          <pre className="type-small mt-3 max-h-96 overflow-auto rounded-lg bg-surface p-4 break-words whitespace-pre-wrap">
+          <pre
+            tabIndex={0}
+            aria-label="Texto em uso"
+            className="type-small mt-3 max-h-96 overflow-auto rounded-lg bg-surface p-4 break-words whitespace-pre-wrap"
+          >
             {state.published.content}
           </pre>
         </details>

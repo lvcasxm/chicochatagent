@@ -1,5 +1,6 @@
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TicketDialog, type TicketDialogProps } from './TicketDialog';
 
@@ -79,6 +80,47 @@ async function fillValid() {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+});
+
+/** Pai com o estado do diálogo, como a tela do chat: é ele quem fecha de verdade. */
+function Host() {
+  const [open, setOpen] = useState(true);
+  return (
+    <TicketDialog
+      open={open}
+      onOpenChange={setOpen}
+      conversationId={CONVERSATION_ID}
+      requester={{ name: 'Maria Silva', email: 'maria@prefeitura.example.test' }}
+      lastSector={null}
+      testMode={false}
+      portalUrl={PORTAL}
+      onCreated={() => undefined}
+    />
+  );
+}
+
+describe('fechar o diálogo (com o pai controlando o estado)', () => {
+  it('depois de abrir o chamado, "Fechar" fecha o diálogo de verdade', async () => {
+    mockApi({
+      [CHECK_URL]: () => json(200, EMPTY_CHECK),
+      [CREATE_URL]: () => json(201, SUCCESS),
+    });
+    render(<Host />);
+    await fillValid();
+    await submit();
+    await screen.findByText('Chamado nº 1000 aberto.');
+    await userEvent.click(
+      within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Fechar' }).at(-1)!,
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('Cancelar e Esc também fecham', async () => {
+    mockApi({});
+    render(<Host />);
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
 });
 
 describe('formulário', () => {

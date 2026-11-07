@@ -78,7 +78,12 @@ function SeriesChart({ series }: { series: MetricsResponse['series'] }) {
       </figcaption>
       <details>
         <summary className="type-small cursor-pointer">Ver os números por dia</summary>
-        <div className="mt-3 max-h-72 overflow-auto">
+        <div
+          role="region"
+          tabIndex={0}
+          aria-label="Números por dia"
+          className="mt-3 max-h-72 overflow-auto"
+        >
           <table className="type-small w-full text-left">
             <thead>
               <tr>

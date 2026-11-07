@@ -51,13 +51,21 @@ export function PromptPage() {
           </dl>
           <section className="flex flex-col gap-3">
             <h2 className="type-title-3">Para os servidores</h2>
-            <pre className="type-small max-h-[36rem] overflow-auto rounded-lg bg-surface p-4 break-words whitespace-pre-wrap">
+            <pre
+              tabIndex={0}
+              aria-label="Prompt para os servidores"
+              className="type-small max-h-[36rem] overflow-auto rounded-lg bg-surface p-4 break-words whitespace-pre-wrap"
+            >
               {state.data.text}
             </pre>
           </section>
           <section className="flex flex-col gap-3">
             <h2 className="type-title-3">Acréscimo só para administradores</h2>
-            <pre className="type-small overflow-auto rounded-lg bg-surface p-4 break-words whitespace-pre-wrap">
+            <pre
+              tabIndex={0}
+              aria-label="Acréscimo para administradores"
+              className="type-small overflow-auto rounded-lg bg-surface p-4 break-words whitespace-pre-wrap"
+            >
               {state.data.adminExtra}
             </pre>
           </section>

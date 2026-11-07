@@ -147,26 +147,6 @@ export function ChatPage() {
           </Notice>
         )}
 
-        {conversationId && (
-          <TicketDialog
-            // Recomeça o formulário a cada conversa.
-            key={conversationId}
-            open={ticketOpen}
-            onOpenChange={setTicketOpen}
-            conversationId={conversationId}
-            requester={{ name: state.me.fullName, email: state.me.email }}
-            lastSector={lists.bootstrap?.lastSector ?? null}
-            testMode={chat.triage.testMode}
-            portalUrl={portal}
-            onCreated={(response) => {
-              setTicketCreated(true);
-              chat.appendNotice(response.message);
-              // Chamado aberto: o servidor liberou a avaliação (RF-060).
-              chat.setFeedback('available');
-            }}
-          />
-        )}
-
         {conversationId &&
           ((chat.triage.feedback === 'available' &&
             !wasSkipped(conversationId) &&
@@ -247,6 +227,28 @@ export function ChatPage() {
         </div>
         <div className="mx-auto w-full max-w-reading min-w-0">{content}</div>
       </div>
+
+      {/* Fora de `content`: o diálogo não pode ser desmontado e remontado junto com a conversa
+          (a lista de mensagens troca de ramo ao carregar), senão ele ficaria preso aberto. */}
+      {conversationId && (
+        <TicketDialog
+          // Recomeça o formulário a cada conversa.
+          key={conversationId}
+          open={ticketOpen}
+          onOpenChange={setTicketOpen}
+          conversationId={conversationId}
+          requester={{ name: state.me.fullName, email: state.me.email }}
+          lastSector={lists.bootstrap?.lastSector ?? null}
+          testMode={chat.triage.testMode}
+          portalUrl={portal}
+          onCreated={(response) => {
+            setTicketCreated(true);
+            chat.appendNotice(response.message);
+            // Chamado aberto: o servidor liberou a avaliação (RF-060).
+            chat.setFeedback('available');
+          }}
+        />
+      )}
     </AppShell>
   );
 }
