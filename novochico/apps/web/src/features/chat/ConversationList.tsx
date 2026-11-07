@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import type { ConversationSummary } from '@chicochat/shared';
 import { Button } from '../../components/Button';
 import { Dialog } from '../../components/Dialog';
+import { TruncatedText } from '../../components/TruncatedText';
 import { IconButton } from '../../components/IconButton';
 import { Notice } from '../../components/Notice';
 import { Tooltip } from '../../components/Tooltip';
@@ -90,7 +91,7 @@ export function ConversationList({
                     active ? 'bg-accent text-accent-fg' : 'text-fg hover:bg-surface-hover',
                   )}
                 >
-                  <span className="type-label truncate">{label}</span>
+                  <TruncatedText text={label} className="type-label" />
                   <span className={cx('type-small', active ? 'text-accent-fg' : 'text-fg-muted')}>
                     {relativeTime(conversation.lastMessageAt)}
                   </span>

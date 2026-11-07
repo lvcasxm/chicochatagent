@@ -13,6 +13,7 @@ import { Input } from './Input';
 import { Markdown, safeUrl } from './Markdown';
 import { ThemeSwitch } from './ThemeSwitch';
 import { ToastProvider, useToast } from './Toast';
+import { TruncatedText } from './TruncatedText';
 
 afterEach(() => {
   cleanup();
@@ -297,5 +298,53 @@ describe('tema', () => {
       </ThemeProvider>,
     );
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+  });
+});
+
+describe('TruncatedText', () => {
+  /** jsdom não mede texto: cada caractere ocupa 10px, numa caixa de 250px (25 caracteres). */
+  function withWidth(width: number) {
+    const proto = HTMLElement.prototype;
+    const scroll = Object.getOwnPropertyDescriptor(proto, 'scrollWidth');
+    const client = Object.getOwnPropertyDescriptor(proto, 'clientWidth');
+    Object.defineProperty(proto, 'scrollWidth', {
+      configurable: true,
+      get(this: HTMLElement) {
+        return Array.from(this.textContent ?? '').length * 10;
+      },
+    });
+    Object.defineProperty(proto, 'clientWidth', { configurable: true, get: () => width });
+    return () => {
+      if (scroll) Object.defineProperty(proto, 'scrollWidth', scroll);
+      if (client) Object.defineProperty(proto, 'clientWidth', client);
+    };
+  }
+
+  it('corte que cai num espaço deixa as reticências coladas à última letra', () => {
+    const restore = withWidth(250);
+    try {
+      render(<TruncatedText text="Abra um chamado de teste por favor, sou administrador" />);
+      expect(screen.getByText('Abra um chamado de teste…')).toBeTruthy();
+      expect(screen.getByText('Abra um chamado de teste…').getAttribute('aria-hidden')).toBe(
+        'true',
+      );
+      // O leitor de tela recebe o título inteiro.
+      expect(
+        screen.getByText('Abra um chamado de teste por favor, sou administrador').className,
+      ).toBe('sr-only');
+    } finally {
+      restore();
+    }
+  });
+
+  it('texto que cabe fica inteiro, num elemento só', () => {
+    const restore = withWidth(250);
+    try {
+      render(<TruncatedText text="Impressora offline" />);
+      expect(screen.getAllByText('Impressora offline')).toHaveLength(1);
+      expect(screen.getByText('Impressora offline').getAttribute('aria-hidden')).toBeNull();
+    } finally {
+      restore();
+    }
   });
 });
