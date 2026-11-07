@@ -128,14 +128,17 @@ const SCENARIOS: Scenario[] = [
   {
     id: '13',
     name: 'Impressora com defeito físico: GLPI, sem mandar à Repros',
-    turns: [
-      'A impressora está fazendo um barulho alto e atolando papel',
-      'É a do meu setor, começou hoje',
-      'Já tirei o papel e reiniciei, continua igual',
-    ],
+    turns: ['A impressora está fazendo um barulho alto e atolando papel'],
     form: true,
-    mustNot: [/site da repros|procure a repros|diretamente (com|na) a? ?repros/i],
+    mustNot: [/modelo/i, /site da repros|procure a repros|diretamente (com|na) a? ?repros/i],
     summaryMust: [/hardware/i, /repros/i],
+  },
+  {
+    id: '13b',
+    name: 'Impressora sem toner: direto, sem perguntar o modelo',
+    turns: ['A impressora está sem toner'],
+    form: true,
+    mustNot: [/modelo/i],
   },
   {
     id: '14',
@@ -304,6 +307,9 @@ async function run(
     replies.push(reply.text);
     for (const problem of generalProblems(reply.text))
       problems.push(`turno ${replies.length}: ${problem}`);
+    if (reply.form && reply.text.includes('?')) {
+      problems.push(`turno ${replies.length}: perguntou e liberou o formulário juntos`);
+    }
     form = reply.form;
     if (form) break;
   }

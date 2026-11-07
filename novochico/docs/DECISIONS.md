@@ -573,7 +573,8 @@ Altera a ADR-030 no conteúdo, sem mudar o modelo de duas camadas.
   7. **Formulário:** "abrir uma solicitação" deixa de liberar, e nenhuma frase de abertura libera se citar Sonner, GRP ou SEI. Quem libera é o marcador; a frase é só a contingência.
   8. **Atalho do Sonner abre conversa,** em vez do PDF, porque é nela que se pede acesso a um módulo. A Ouvidoria sai das instruções e do card.
   9. **`npm run eval:chat`:** os cenários do Anexo D, com o Gemini real, fora de `npm test`.
-  10. O teste que proíbe o domínio da Prefeitura no código abre exceção só para `suporte.sei@` e `sei.`, canais públicos citados nas instruções.
+  10. **Pergunta e formulário nunca juntos:** regra fixa, conferida pela suíte. O ensaio mostrou respostas que perguntavam e liberavam o formulário ao mesmo tempo. Impressora com defeito físico abre direto, sem perguntar o modelo.
+  11. O teste que proíbe o domínio da Prefeitura no código abre exceção só para `suporte.sei@` e `sei.`, canais públicos citados nas instruções.
 - **Consequências e riscos:**
   - Bancos com versão publicada não mudam sozinhos: o texto novo entra pelo painel, e os cards por lá ou por SQL.
   - A suíte depende do modelo, que varia entre execuções: um cenário pode falhar uma vez e passar na seguinte. Falha repetida indica problema de instrução.

@@ -884,6 +884,7 @@ Antes de perguntar, releia a conversa inteira:
 - Para liberar o formulário de chamado, inclua `<<OPEN_TICKET_FORM>>` na última linha.
 - Os marcadores devem ser texto simples (sem crases e sem blocos de código).
 - Nunca use `<<OPEN_TICKET_FORM>>` quando a pessoa deve ser orientada a outro canal.
+- Nunca use `<<OPEN_TICKET_FORM>>` em uma resposta que faça uma pergunta: ou você pergunta, ou libera o formulário.
 
 ### REGRA INVIOLÁVEL — TRIAGEM
 Identifique o que a pessoa quer. O assunto inicial pode mudar durante a conversa: siga o que ela quer agora, não o atalho que escolheu no início.
@@ -898,7 +899,7 @@ As instruções de atendimento dizem em qual desses casos cada assunto se encaix
 
 PROIBIDO liberar o formulário apenas porque a pessoa disse "abrir chamado", "quero suporte", "abre um ticket" ou algo equivalente, sem dizer do que se trata. Nesse caso, explique que precisa entender a situação para registrar o chamado certo e faça a primeira pergunta. NÃO emita `<<OPEN_TICKET_FORM>>` nesse turno.
 
-Ao liberar o formulário, diga em uma frase que vai abrir o chamado e que o formulário vai pedir os dados de identificação.
+Ao liberar o formulário, diga em uma frase que vai abrir o chamado e que o formulário vai pedir os dados de identificação. Essa mensagem não pode ter nenhuma pergunta. Se ainda falta perguntar algo, pergunte sem o marcador e libere o formulário só depois da resposta.
 
 ### REGRA INVIOLÁVEL — VOCÊ É O CANAL OFICIAL DA TI
 NUNCA, em nenhuma hipótese:
@@ -964,7 +965,7 @@ Ação esperada:
 
 3. CASOS ESPECÍFICOS (obrigatórios quando se aplicam)
 - Pedido de acesso a módulo do Sonner/GRP (são o mesmo sistema): escreva em "Problema identificado" o nome do módulo e a funcionalidade desejada, e em "Contexto" o motivo do pedido. Nunca escreva apenas que o usuário deseja acesso ao sistema. Se algum desses dados não foi informado, registre "Não informado".
-- Defeito físico de impressora: escreva em "Problema identificado" a expressão "problema de hardware de impressora" e em "Ação esperada" que a TI fará o repasse à Repros, responsável pelo reparo.
+- Impressora com defeito, falha mecânica, atolamento ou falta de toner: escreva em "Problema identificado" a expressão "problema de hardware de impressora" e em "Ação esperada" que a TI fará o repasse à Repros, responsável pelo reparo.
 - Pedido de serviço (instalar, criar conta, liberar acesso, redefinir senha): em "Comportamento observado" escreva "Não se aplica: solicitação de serviço." e em "Ação esperada" o que foi pedido.
 
 4. CATEGORIA (campo "categoria")
@@ -1068,7 +1069,7 @@ Ordem: `hardware`, `password`, `grp`, `network`, as demais, depois `sei`, depois
 
 `npm run eval:chat` roda os cenários de `apps/api/scripts/eval-chat.ts` com o Gemini real, sem banco e sem abrir chamado. Gasta cota, por isso fica fora de `npm test`. `npm run eval:chat -- 3 15` roda só alguns.
 
-Toda resposta é conferida: no máximo uma pergunta; nenhum pedido de nome, setor ou IP; nenhum JSON ou bloco de código; nenhum emoji.
+Toda resposta é conferida: no máximo uma pergunta; pergunta e formulário nunca juntos; nenhum pedido de nome, setor ou IP; nenhum JSON ou bloco de código; nenhum emoji.
 
 | # | Conversa | Esperado |
 |---|---|---|
@@ -1084,7 +1085,8 @@ Toda resposta é conferida: no máximo uma pergunta; nenhum pedido de nome, seto
 | 10 | Dúvida de uso do SEI | E-mail de suporte ou Joseias; sem GLPI |
 | 11 | Instalar impressora | Libera o formulário |
 | 12 | Instalar programa | Libera o formulário |
-| 13 | Impressora com defeito físico | Libera o formulário; resumo com hardware e Repros; não manda à Repros |
+| 13 | Impressora com defeito físico | Libera o formulário na hora, sem perguntar o modelo; resumo com hardware e Repros; não manda à Repros |
+| 13b | Impressora sem toner | Libera o formulário na hora, sem perguntar o modelo |
 | 14 | Computador sem rede | Investiga e libera o formulário |
 | 15 | Setor inteiro sem rede | Libera sem pedir cabo nem reinício |
 | 16 | Fora de TI | Recusa com a frase padrão |

@@ -85,7 +85,7 @@ Sonner e GRP são o mesmo sistema. Reconheça os dois nomes e, se ajudar, expliq
 
 ### Impressoras com defeito físico
 
-Defeito, falha mecânica, atolamento ou toner: abra o chamado no GLPI, deixando claro que é um problema de hardware da impressora. A TI faz a triagem e repassa à Repros, que é a responsável pelo reparo. Não apresente a TI como responsável pelo conserto e não oriente a pessoa a procurar a Repros diretamente.
+Defeito, falha mecânica, atolamento ou toner: abra o chamado no GLPI na hora, sem perguntar modelo, localização nem pedir tentativas, deixando claro que é um problema de hardware da impressora. A TI faz a triagem e repassa à Repros, que é a responsável pelo reparo. Não apresente a TI como responsável pelo conserto e não oriente a pessoa a procurar a Repros diretamente.
 
 ### Segurança da informação
 

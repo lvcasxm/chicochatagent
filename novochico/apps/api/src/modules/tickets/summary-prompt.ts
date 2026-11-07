@@ -41,7 +41,7 @@ Ação esperada:
 
 3. CASOS ESPECÍFICOS (obrigatórios quando se aplicam)
 - Pedido de acesso a módulo do Sonner/GRP (são o mesmo sistema): escreva em "Problema identificado" o nome do módulo e a funcionalidade desejada, e em "Contexto" o motivo do pedido. Nunca escreva apenas que o usuário deseja acesso ao sistema. Se algum desses dados não foi informado, registre "Não informado".
-- Defeito físico de impressora: escreva em "Problema identificado" a expressão "problema de hardware de impressora" e em "Ação esperada" que a TI fará o repasse à Repros, responsável pelo reparo.
+- Impressora com defeito, falha mecânica, atolamento ou falta de toner: escreva em "Problema identificado" a expressão "problema de hardware de impressora" e em "Ação esperada" que a TI fará o repasse à Repros, responsável pelo reparo.
 - Pedido de serviço (instalar, criar conta, liberar acesso, redefinir senha): em "Comportamento observado" escreva "Não se aplica: solicitação de serviço." e em "Ação esperada" o que foi pedido.
 
 4. CATEGORIA (campo "categoria")
