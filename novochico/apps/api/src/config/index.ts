@@ -126,8 +126,8 @@ const envSchema = z
       })
       .default(DEFAULT_IP_PATTERN),
     GEMINI_SUMMARY_MODEL: z.string().min(1).default('gemini-3.1-flash-lite'),
-    // Análise IA e assistente de instruções do painel (PEND-17: validar a disponibilidade).
-    GEMINI_INSIGHTS_MODEL: z.string().min(1).default('gemini-2.5-flash'),
+    // Análise IA e assistente de instruções do painel (ADR-044).
+    GEMINI_INSIGHTS_MODEL: z.string().min(1).default('gemini-3.1-flash-lite'),
   })
   .superRefine((env, ctx) => {
     if (env.GOOGLE_CLIENT_ID && !env.GOOGLE_CLIENT_SECRET) {

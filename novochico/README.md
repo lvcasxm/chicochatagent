@@ -42,7 +42,7 @@ npm run admin:grant -- seu.nome@dominio.gov.br
 
 Por padrão a IA é o Gemini (`AI_PROVIDER=gemini`), que precisa de `GEMINI_API_KEY` no `.env`; sem a chave, o chat responde que o serviço está indisponível. Para desenvolver a interface sem chave, use `AI_PROVIDER=fake` (já no `.env.example`): a IA responde com um roteiro. O fake é recusado em produção. Depois de atualizar, rode `npm run db:migrate`.
 
-O painel de administração (`/admin`, só para o papel `admin`) usa a mesma chave. A Análise IA e o assistente de instruções usam `GEMINI_INSIGHTS_MODEL` (padrão `gemini-2.5-flash`); com `AI_PROVIDER=fake` eles respondem com textos de desenvolvimento.
+O painel de administração (`/admin`, só para o papel `admin`) usa a mesma chave. A Análise IA e o assistente de instruções usam `GEMINI_INSIGHTS_MODEL` (padrão `gemini-3.1-flash-lite`); com `AI_PROVIDER=fake` eles respondem com textos de desenvolvimento.
 
 ## Implantação
 

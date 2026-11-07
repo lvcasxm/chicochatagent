@@ -507,7 +507,7 @@ interface LlmClient {
 }
 ```
 
-`[PROPOSTA]` Implementação via `@google/genai`. Papel `assistant` vira `model`; `systemInstruction` recebe o prompt. O filtro de `<think>` não é portado. Modelo: `GEMINI_CHAT_MODEL`, `GEMINI_SUMMARY_MODEL`, `GEMINI_INSIGHTS_MODEL`, todos por ambiente. Padrão `gemini-3.1-flash-lite` nos dois primeiros `[LEGADO]`; a Análise IA usava `gemini-2.5-flash` pelo gateway; `[PENDENTE: PEND-17]` validar disponibilidade.
+`[PROPOSTA]` Implementação via `@google/genai`. Papel `assistant` vira `model`; `systemInstruction` recebe o prompt. O filtro de `<think>` não é portado. Modelo: `GEMINI_CHAT_MODEL`, `GEMINI_SUMMARY_MODEL`, `GEMINI_INSIGHTS_MODEL`, todos por ambiente. Padrão `gemini-3.1-flash-lite` nos dois primeiros `[LEGADO]`; a Análise IA usava `gemini-2.5-flash` pelo gateway, desativado pelo Google para novos usuários; o padrão agora é `gemini-3.1-flash-lite` (ADR-044).
 
 ### H.2 Parâmetros do chat `[LEGADO]`
 Temperatura 0,2; top_p 0,9; `maxOutputTokens` 512. Histórico: 16 últimas mensagens, cada uma limitada a 2000 caracteres com reticências. **Só** `user` e `assistant` do banco. `notice` não entra.
@@ -679,7 +679,7 @@ Toda leitura de ambiente em `apps/api/src/config`, validada por zod na partida. 
 | `AI_PROVIDER` | Não | `gemini` | `gemini` ou `fake` (só desenvolvimento; recusado em produção) |
 | `GEMINI_API_KEY` | Para o Gemini | — | Só no servidor. Sem ela o chat responde 503 (ADR-036) |
 | `GEMINI_CHAT_MODEL`, `GEMINI_SUMMARY_MODEL` | Não | `gemini-3.1-flash-lite` | Modelo |
-| `GEMINI_INSIGHTS_MODEL` | Não | `gemini-2.5-flash` | `PEND-17` |
+| `GEMINI_INSIGHTS_MODEL` | Não | `gemini-3.1-flash-lite` | Análise IA e assistente de instruções (ADR-044) |
 | `GLPI_PROVIDER` | Não | `glpi` | `glpi` ou `fake` (só desenvolvimento; recusado em produção) |
 | `GLPI_URL`, `GLPI_CLIENT_ID`, `GLPI_CLIENT_SECRET`, `GLPI_USERNAME`, `GLPI_PASSWORD` | Para o GLPI, juntas | Ver G.1 | Sem elas a abertura fica indisponível (ADR-037) |
 | `GLPI_TOKEN_PATH`, `GLPI_REQUEST_TYPE_ID`, `GLPI_TIMEOUT_MS` | Não | `/api.php/token`, 10, 15000 | Ver G.1 |
