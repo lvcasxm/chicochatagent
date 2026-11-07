@@ -10,7 +10,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file-if-exists=../../.env src/db/migrate.ts",
     "db:seed": "tsx --env-file-if-exists=../../.env src/db/seed/run.ts",
-    "admin:grant": "tsx --env-file-if-exists=../../.env scripts/admin-grant.ts"
+    "admin:grant": "tsx --env-file-if-exists=../../.env scripts/admin-grant.ts",
+    "eval:chat": "tsx --env-file-if-exists=../../.env scripts/eval-chat.ts"
   },
   "dependencies": {
     "@chicochat/shared": "*",

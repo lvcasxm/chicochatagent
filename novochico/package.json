@@ -22,7 +22,8 @@
     "db:migrate": "npm run db:migrate -w @chicochat/api",
     "db:seed": "npm run db:seed -w @chicochat/api",
     "admin:grant": "npm run admin:grant -w @chicochat/api --",
-    "e2e": "playwright test -c e2e/playwright.config.ts"
+    "e2e": "playwright test -c e2e/playwright.config.ts",
+    "eval:chat": "npm run eval:chat -w @chicochat/api --"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
