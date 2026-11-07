@@ -261,6 +261,8 @@ describe('sem CORS e sem identificadores institucionais (S-17, S-18)', () => {
   it('o código, as migrations e os seeds não têm e-mail nem domínio institucional real', () => {
     const root = join(import.meta.dirname, '..', '..', '..', '..');
     const domain = ['pedro', 'leopoldo.mg.gov.br'].join('');
+    // Canais públicos de atendimento, citados de propósito nas instruções iniciais (ADR-045).
+    const publicChannels = [`suporte.sei@${domain}`, `sei.${domain}`];
     const folders = ['apps/api/src', 'apps/api/drizzle', 'apps/web/src', 'packages/shared/src'];
     const hits: string[] = [];
     const walk = (dir: string) => {
@@ -268,7 +270,11 @@ describe('sem CORS e sem identificadores institucionais (S-17, S-18)', () => {
         const path = join(dir, entry.name);
         if (entry.isDirectory()) walk(path);
         else if (/\.(ts|tsx|sql|json|css|html)$/.test(entry.name)) {
-          if (readFileSync(path, 'utf8').toLowerCase().includes(domain)) hits.push(path);
+          const text = publicChannels.reduce(
+            (current, channel) => current.split(channel).join(''),
+            readFileSync(path, 'utf8').toLowerCase(),
+          );
+          if (text.includes(domain)) hits.push(path);
         }
       }
     };

@@ -4,9 +4,10 @@ type CategorySeed = typeof categories.$inferInsert;
 
 export const SONNER_GUIDE_URL =
   'https://drive.google.com/file/d/1f6eROGNl47zhA5zuP925U-1iJGFtUBcA/view?usp=drive_link';
-export const OUVIDORIA_GUIDE_URL =
-  'https://drive.google.com/file/d/1JXErPh31xZJFVxGglTixj6lHWrN98OUB/view?usp=drive_link';
 export const JOSEIAS_URL = 'https://joseias.pl.mg.gov.br';
+export const SEI_URL = 'https://sei.pedroleopoldo.mg.gov.br';
+export const INTRANET_URL = 'https://intra.pl.mg.gov.br';
+export const SEI_SUPPORT_EMAIL = 'suporte.sei@pedroleopoldo.mg.gov.br';
 
 /**
  * Cards da tela inicial: SONNET_CONTEXT, Anexo C. Textos e links transcritos do sistema
@@ -79,12 +80,11 @@ export const CATEGORY_SEEDS: CategorySeed[] = [
   {
     key: 'grp',
     title: 'Sistemas GRP Sonner',
-    cardDescription: 'Clique aqui para o guia em PDF.',
-    icon: 'Settings',
-    action: 'external_link',
-    externalUrl: SONNER_GUIDE_URL,
-    secondaryLinkLabel: 'Ouvidoria aqui',
-    secondaryLinkUrl: OUVIDORIA_GUIDE_URL,
+    cardDescription: 'Acesso a módulos, senha, erros e sugestões',
+    icon: 'FileText',
+    action: 'chat',
+    cannedMessage: 'Olá! Preciso de ajuda com o sistema GRP/Sonner. Pode me orientar?',
+    shortLabel: 'GRP/Sonner',
     sortOrder: 30,
   },
   {

@@ -93,7 +93,7 @@ describe.skipIf(!TEST_DATABASE_URL)('content service', () => {
       expect(keys).toHaveLength(3);
     });
 
-    it('descreve a ação de cada card e o link secundário do GRP', async () => {
+    it('descreve a ação de cada card; o do GRP abre conversa, sem link', async () => {
       await seedDatabase(orm());
       const cards = await content().listHomeCards();
       const byKey = Object.fromEntries(cards.map((card) => [card.key, card]));
@@ -105,11 +105,12 @@ describe.skipIf(!TEST_DATABASE_URL)('content service', () => {
         secondaryLink: null,
       });
       expect(byKey['hardware']?.cannedMessage).toMatch(/^Olá! /);
-      expect(byKey['grp']?.action).toBe('external_link');
-      expect(byKey['grp']?.secondaryLink).toEqual({
-        label: 'Ouvidoria aqui',
-        url: expect.stringMatching(/^https:\/\/drive\.google\.com\//) as unknown,
+      expect(byKey['grp']).toMatchObject({
+        action: 'chat',
+        externalUrl: null,
+        secondaryLink: null,
       });
+      expect(byKey['grp']?.cannedMessage).toContain('GRP/Sonner');
     });
 
     it('devolve lista vazia sem seed', async () => {

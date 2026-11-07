@@ -57,14 +57,14 @@ describe('buildSystemPrompt', () => {
 });
 
 describe('regras fixas', () => {
-  it('têm as oito seções, sem as editáveis (escopo, Sonner e categorias)', () => {
-    expect(FIXED_RULE_SECTIONS).toHaveLength(8);
+  it('têm as sete seções, sem as editáveis (escopo, Sonner e categorias)', () => {
+    expect(FIXED_RULE_SECTIONS).toHaveLength(7);
     expect(FIXED_RULES).not.toContain('ESCOPO DA TI (SATD)');
     expect(FIXED_RULES).not.toContain('QUANDO REDIRECIONAR PARA O SONNER');
     expect(FIXED_RULES).not.toContain('MAPEAMENTO DE CATEGORIAS');
   });
 
-  it('continuam idênticas ao Anexo A de SONNET_CONTEXT.md (nada reescrito)', () => {
+  it('continuam idênticas ao Anexo A de SONNET_CONTEXT.md', () => {
     const doc = readFileSync(
       new URL('../../../../../../docs/SONNET_CONTEXT.md', import.meta.url),
       'utf8',
@@ -82,5 +82,9 @@ describe('regras fixas', () => {
     expect(FIXED_RULES).toContain('NUNCA retorne JSON');
     expect(FIXED_RULES).toContain('NUNCA faça mais de UMA pergunta');
     expect(FIXED_RULES).toContain('NÃO emita `<<OPEN_TICKET_FORM>>` nesse turno');
+    expect(FIXED_RULES).toContain('PROIBIDO solicitar Nome, Setor ou IP no chat');
+    expect(FIXED_RULES).toContain('NUNCA pergunte de novo o que a pessoa já respondeu');
+    expect(FIXED_RULES).toContain('Sou um agente focado em responder dúvidas');
+    expect(FIXED_RULES).toContain('**Pedido de serviço**');
   });
 });

@@ -863,7 +863,7 @@ describe.skipIf(!TEST_DATABASE_URL)('chat: conversas e mensagens', () => {
 
     it('categoria inexistente, oculta ou de link externo: 422', async () => {
       const who = await actor();
-      for (const categoryKey of ['nao-existe', 'access', 'sei', 'grp']) {
+      for (const categoryKey of ['nao-existe', 'access', 'sei']) {
         const response = await app.inject({
           method: 'POST',
           url: '/api/conversations',
