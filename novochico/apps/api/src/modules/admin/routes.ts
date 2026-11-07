@@ -31,6 +31,7 @@ import {
 import { requireAuth } from '../../http/auth';
 import { AppError } from '../../lib/errors';
 import { parseInput } from '../../lib/validation';
+import type { UserRateLimiter } from '../../http/user-rate-limit';
 import type { MetricsService } from '../analytics';
 import type { RehearsalService } from '../chat';
 import type { CategoriesAdmin, InstructionsAdmin } from '../content';
@@ -55,6 +56,7 @@ export function registerAdminRoutes(
     instructions: InstructionsAdmin;
     categories: CategoriesAdmin;
     rehearsal: RehearsalService;
+    limits: UserRateLimiter;
     now: () => Date;
   },
 ): void {
@@ -67,10 +69,14 @@ export function registerAdminRoutes(
     return deps.metrics.overview(period);
   });
 
-  app.post('/api/admin/insights', adminOnly, async (request): Promise<InsightsResponse> => {
-    const input = parseInput(insightsRequestSchema, request.body ?? {});
-    return deps.admin.analyze(actor(request), input.period);
-  });
+  app.post(
+    '/api/admin/insights',
+    { ...adminOnly, preHandler: deps.limits.guard('insights') },
+    async (request): Promise<InsightsResponse> => {
+      const input = parseInput(insightsRequestSchema, request.body ?? {});
+      return deps.admin.analyze(actor(request), input.period);
+    },
+  );
 
   /* ------------------------------------------------------------------ conversas e exportação */
 
@@ -92,17 +98,21 @@ export function registerAdminRoutes(
     },
   );
 
-  app.get('/api/admin/export/:type', adminOnly, async (request, reply) => {
-    const { type } = parseInput(exportParamsSchema, request.params);
-    const { period } = parseInput(periodQuerySchema, request.query);
-    const lines = await deps.admin.exportCsv(actor(request), type, period);
-    const stamp = deps.now().toISOString().slice(0, 10).replaceAll('-', '');
-    return reply
-      .header('content-type', 'text/csv; charset=utf-8')
-      .header('content-disposition', `attachment; filename="chicochat-${type}-${stamp}.csv"`)
-      .header('cache-control', 'no-store')
-      .send(Readable.from(lines));
-  });
+  app.get(
+    '/api/admin/export/:type',
+    { ...adminOnly, preHandler: deps.limits.guard('export') },
+    async (request, reply) => {
+      const { type } = parseInput(exportParamsSchema, request.params);
+      const { period } = parseInput(periodQuerySchema, request.query);
+      const lines = await deps.admin.exportCsv(actor(request), type, period);
+      const stamp = deps.now().toISOString().slice(0, 10).replaceAll('-', '');
+      return reply
+        .header('content-type', 'text/csv; charset=utf-8')
+        .header('content-disposition', `attachment; filename="chicochat-${type}-${stamp}.csv"`)
+        .header('cache-control', 'no-store')
+        .send(Readable.from(lines));
+    },
+  );
 
   /* ------------------------------------------------------------------ cards */
 

@@ -10,6 +10,7 @@ export const testConfig: Config = {
   port: 0,
   logLevel: 'info',
   trustProxy: false,
+  webDistDir: null,
   databaseUrl: 'postgres://usuario:senha-ficticia@127.0.0.1:1/teste',
   databaseMigrationUrl: undefined,
   appOrigin: 'http://127.0.0.1:5173',

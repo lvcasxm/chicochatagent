@@ -66,7 +66,10 @@ const components: Components = {
     <code className="rounded-xs bg-surface px-1 font-mono text-[0.9em]">{children}</code>
   ),
   pre: ({ children }) => (
-    <pre className="type-small overflow-x-auto rounded-tag bg-surface p-4 [&_code]:bg-transparent [&_code]:p-0">
+    <pre
+      tabIndex={0}
+      className="type-small overflow-x-auto rounded-tag bg-surface p-4 [&_code]:bg-transparent [&_code]:p-0"
+    >
       {children}
     </pre>
   ),

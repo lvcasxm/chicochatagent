@@ -653,14 +653,14 @@ describe.skipIf(!TEST_DATABASE_URL)('chat: conversas e mensagens', () => {
       expect((await send(who, id, 'terceira')).status).toBe(200);
     });
 
-    it('limite de 20 mensagens por minuto por usuário, que volta com o tempo', async () => {
+    it('limite de 15 mensagens por minuto por usuário, que volta com o tempo', async () => {
       useScript(Array.from({ length: 25 }, () => ['ok']));
       const who = await actor();
       const id = await newConversation(who);
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 15; i++) {
         expect((await send(who, id, `mensagem ${i}`)).status).toBe(200);
       }
-      const blocked = await send(who, id, 'mensagem 21');
+      const blocked = await send(who, id, 'mensagem 16');
       expect(blocked.status).toBe(429);
       expect(blocked.response.headers['retry-after']).toBeDefined();
 
@@ -674,8 +674,8 @@ describe.skipIf(!TEST_DATABASE_URL)('chat: conversas e mensagens', () => {
       const b = await actor();
       const idA = await newConversation(a);
       const idB = await newConversation(b);
-      for (let i = 0; i < 20; i++) await send(a, idA, `a ${i}`);
-      expect((await send(a, idA, 'a 21')).status).toBe(429);
+      for (let i = 0; i < 15; i++) await send(a, idA, `a ${i}`);
+      expect((await send(a, idA, 'a 16')).status).toBe(429);
       expect((await send(b, idB, 'b 1')).status).toBe(200);
     }, 30_000);
   });

@@ -532,14 +532,18 @@ describe.skipIf(!TEST_DATABASE_URL)('administração (F8)', () => {
       await addMessage(old.id, 'user', at('2025-01-01T00:00:00Z'), 'mensagem antiga');
       const admin = await actor();
 
+      // Exportar é limitado a 5 por minuto: o relógio avança entre uma e outra.
       for (const type of ['conversations', 'messages', 'tickets', 'events', 'feedbacks']) {
+        clock.advance(MINUTE);
         const response = await call(admin.cookie, 'GET', `/api/admin/export/${type}?period=7d`);
         expect(response.statusCode, type).toBe(200);
         const lines = response.body.trim().split('\r\n');
         expect(lines.length, type).toBeGreaterThanOrEqual(2);
       }
+      clock.advance(MINUTE);
       const week = (await call(admin.cookie, 'GET', '/api/admin/export/messages?period=7d')).body;
       expect(week).not.toContain('mensagem antiga');
+      clock.advance(MINUTE);
       const everything = (await call(admin.cookie, 'GET', '/api/admin/export/messages?period=all'))
         .body;
       expect(everything).toContain('mensagem antiga');

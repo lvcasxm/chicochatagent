@@ -152,7 +152,7 @@ export default defineConfig(
     },
   },
   {
-    files: ['apps/api/**/*.ts', 'packages/**/*.ts', 'eslint.config.js'],
+    files: ['apps/api/**/*.ts', 'packages/**/*.ts', 'eslint.config.js', 'e2e/**/*.{ts,mjs}'],
     languageOptions: { globals: globals.node },
   },
   {
@@ -169,7 +169,7 @@ export default defineConfig(
   onlyConfigReadsEnv,
   // Testes e configuração de ferramentas podem ler o ambiente.
   {
-    files: ['**/*.test.{ts,tsx}', 'apps/*/vite.config.ts', 'apps/*/vitest.config.ts'],
+    files: ['**/*.test.{ts,tsx}', 'apps/*/vite.config.ts', 'apps/*/vitest.config.ts', 'e2e/**'],
     rules: { 'no-restricted-properties': 'off' },
   },
   // Duplos de teste: geradores sem await e erros simulados são o jeito natural de escrevê-los.

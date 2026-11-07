@@ -27,6 +27,11 @@ async function sweepSessions(): Promise<void> {
     await app.jobs.closeInactiveConversations();
   } catch (err) {
     logger.error({ err }, 'Falha ao encerrar conversas inativas');
+  }
+  try {
+    await app.jobs.expireStaleTicketAttempts();
+  } catch (err) {
+    logger.error({ err }, 'Falha ao encerrar tentativas de chamado abandonadas');
   } finally {
     sweeping = false;
   }

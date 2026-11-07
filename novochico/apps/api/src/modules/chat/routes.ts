@@ -10,6 +10,7 @@ import {
 import { requireAuth } from '../../http/auth';
 import { AppError } from '../../lib/errors';
 import { parseInput } from '../../lib/validation';
+import type { UserRateLimiter } from '../../http/user-rate-limit';
 import type { ConversationsService } from '../conversations';
 import type { ChatService } from './service';
 
@@ -25,7 +26,7 @@ function conversationId(params: unknown): string {
 
 export function registerChatRoutes(
   app: FastifyInstance,
-  deps: { chat: ChatService; conversations: ConversationsService },
+  deps: { chat: ChatService; conversations: ConversationsService; limits: UserRateLimiter },
 ): void {
   // Tudo aqui exige login e o aceite do aviso de privacidade (RF-005).
   const guarded = { config: { requiresPrivacyAck: true } } as const;
@@ -61,51 +62,58 @@ export function registerChatRoutes(
    * Envia uma mensagem e responde em SSE (SONNET_CONTEXT, seção E). Erros anteriores ao primeiro
    * trecho de resposta saem como HTTP normal; os posteriores, como evento `error` no stream.
    */
-  app.post('/api/conversations/:id/messages', guarded, async (request, reply) => {
-    const { user } = requireAuth(request);
-    const id = conversationId(request.params);
-    const input = parseInput(sendMessageRequestSchema, request.body);
+  app.post(
+    '/api/conversations/:id/messages',
+    { ...guarded, preHandler: deps.limits.guard('messages') },
+    async (request, reply) => {
+      const { user } = requireAuth(request);
+      const id = conversationId(request.params);
+      const input = parseInput(sendMessageRequestSchema, request.body);
 
-    // Cliente que fecha a aba cancela a chamada à IA, para não gastar com quem foi embora.
-    const abort = new AbortController();
-    reply.raw.on('close', () => {
-      if (!reply.raw.writableEnded) abort.abort();
-    });
+      // Cliente que fecha a aba cancela a chamada à IA, para não gastar com quem foi embora.
+      const abort = new AbortController();
+      reply.raw.on('close', () => {
+        if (!reply.raw.writableEnded) abort.abort();
+      });
 
-    const turn = await deps.chat.startTurn({
-      actor: { id: user.id, role: user.role },
-      conversationId: id,
-      text: input.content,
-      signal: abort.signal,
-    });
+      const turn = await deps.chat.startTurn({
+        actor: { id: user.id, role: user.role },
+        conversationId: id,
+        text: input.content,
+        signal: abort.signal,
+      });
 
-    reply.hijack();
-    const { raw } = reply;
-    raw.writeHead(200, {
-      'content-type': 'text/event-stream; charset=utf-8',
-      'cache-control': 'no-cache, no-transform',
-      connection: 'keep-alive',
-      // Sem isto, um proxy reverso seguraria o stream até o fim.
-      'x-accel-buffering': 'no',
-      'x-request-id': request.id,
-    });
+      reply.hijack();
+      const { raw } = reply;
+      raw.writeHead(200, {
+        'content-type': 'text/event-stream; charset=utf-8',
+        'cache-control': 'no-cache, no-transform',
+        connection: 'keep-alive',
+        // Sem isto, um proxy reverso seguraria o stream até o fim.
+        'x-accel-buffering': 'no',
+        'x-request-id': request.id,
+      });
 
-    try {
-      // O laço roda até o fim mesmo sem cliente: a resposta parcial precisa ser gravada.
-      for await (const { event, data } of turn.events) {
-        if (!raw.destroyed && !raw.writableEnded) {
-          raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      try {
+        // O laço roda até o fim mesmo sem cliente: a resposta parcial precisa ser gravada.
+        for await (const { event, data } of turn.events) {
+          if (!raw.destroyed && !raw.writableEnded) {
+            raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+          }
         }
+      } catch (error) {
+        request.log.error({ err: error }, 'Falha no stream da conversa');
+        if (!raw.destroyed && !raw.writableEnded) {
+          const body = {
+            code: 'INTERNAL',
+            message: 'Ocorreu um erro inesperado. Tente novamente.',
+          };
+          raw.write(`event: error\ndata: ${JSON.stringify(body)}\n\n`);
+        }
+      } finally {
+        turn.dispose();
+        if (!raw.destroyed && !raw.writableEnded) raw.end();
       }
-    } catch (error) {
-      request.log.error({ err: error }, 'Falha no stream da conversa');
-      if (!raw.destroyed && !raw.writableEnded) {
-        const body = { code: 'INTERNAL', message: 'Ocorreu um erro inesperado. Tente novamente.' };
-        raw.write(`event: error\ndata: ${JSON.stringify(body)}\n\n`);
-      }
-    } finally {
-      turn.dispose();
-      if (!raw.destroyed && !raw.writableEnded) raw.end();
-    }
-  });
+    },
+  );
 }

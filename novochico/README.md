@@ -44,6 +44,10 @@ Por padrão a IA é o Gemini (`AI_PROVIDER=gemini`), que precisa de `GEMINI_API_
 
 O painel de administração (`/admin`, só para o papel `admin`) usa a mesma chave. A Análise IA e o assistente de instruções usam `GEMINI_INSIGHTS_MODEL` (padrão `gemini-2.5-flash`); com `AI_PROVIDER=fake` eles respondem com textos de desenvolvimento.
 
+## Testes de ponta a ponta
+
+`npm run e2e` sobe um banco novo (`chicochat_e2e`, no PostgreSQL do Compose), constrói a interface e a serve pela API com a IA e o GLPI de mentira, e roda a suíte no Chrome instalado, em quatro combinações: desktop e celular, tema claro e escuro. Precisa de `TEST_DATABASE_URL` no `.env`. Em produção, a API serve a interface quando `WEB_DIST_DIR` aponta para o build do web.
+
 ## GLPI
 
 Por padrão o GLPI é de verdade (`GLPI_PROVIDER=glpi`), com as variáveis `GLPI_*` no `.env`; sem elas, a abertura de chamado responde que o sistema está indisponível. Para desenvolver sem GLPI, use `GLPI_PROVIDER=fake` (já no `.env.example`): os chamados são simulados. O fake é recusado em produção. **Nunca** teste contra o GLPI de produção sem o responsável presente (ADR-029).

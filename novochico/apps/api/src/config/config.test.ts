@@ -29,6 +29,7 @@ describe('loadConfig', () => {
       port: 3000,
       logLevel: 'info',
       trustProxy: false,
+      webDistDir: null,
       databaseUrl: VALID.DATABASE_URL,
       databaseMigrationUrl: undefined,
       appOrigin: 'http://127.0.0.1:5173',
