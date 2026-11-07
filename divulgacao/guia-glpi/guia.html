@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Como abrir um chamado no GLPI</title>
+<meta name="description" content="Passo a passo para abrir um chamado diretamente no GLPI quando o ChicoChat+ estiver fora do ar.">
+<meta name="author" content="Prefeitura Municipal de Pedro Leopoldo">
+<style>
+@font-face { font-family: 'Inter'; font-weight: 100 900; src: url('marca/inter-latin-wght-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Montserrat'; font-weight: 100 900; src: url('marca/montserrat-latin-wght-normal.woff2') format('woff2'); }
+
+@page { size: 210mm 297mm; margin: 0; }
+:root {
+  --bg: #FBFBFB; --fg: #111110; --muted: #5C5C5B; --accent: #24BCEC;
+  --surface: #F0F0F0; --border: #E0E0DF; --strong: #7A7A7A;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--fg); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { font: 400 13.5px/21px 'Inter', sans-serif; }
+a { color: inherit; text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+strong { font-weight: 600; }
+
+.page { position: relative; width: 210mm; height: 297mm; overflow: hidden; background: var(--bg); break-after: page; padding: 56px 56px 72px; display: flex; flex-direction: column; }
+.page > * { flex-shrink: 0; }
+.page:last-child { break-after: auto; }
+
+.eyebrow { display: inline-block; align-self: flex-start; background: var(--accent); color: var(--fg); font: 600 11px/16px 'Inter', sans-serif; letter-spacing: .02em; padding: 4px 12px; border-radius: 999px; margin-bottom: 16px; }
+h1 { font: 500 33px/41px 'Montserrat', sans-serif; letter-spacing: -.01em; margin-bottom: 12px; }
+.lead { font-size: 15.5px; line-height: 24px; color: var(--muted); max-width: 610px; }
+h2 { font: 600 15px/22px 'Montserrat', sans-serif; margin-bottom: 8px; }
+.small { font-size: 11.5px; line-height: 17px; color: var(--muted); }
+.foot { position: absolute; left: 56px; right: 56px; bottom: 28px; display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; line-height: 16px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 10px; }
+
+.num { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; background: var(--accent); color: var(--fg); font: 600 12px/1 'Inter', sans-serif; }
+.steps { list-style: none; display: flex; flex-direction: column; gap: 16px; }
+.steps li { display: flex; gap: 12px; }
+.steps h3 { font: 600 13.5px/21px 'Inter', sans-serif; }
+.steps p { color: var(--muted); }
+.rule { border: 0; border-top: 1px solid var(--border); margin: 28px 0; }
+
+/* Capa */
+.cover { padding: 0; }
+.cover-top { padding: 56px 56px 40px; }
+.cover-top img { height: 76px; display: block; margin-bottom: 64px; }
+.cover h1 { font-size: 54px; line-height: 62px; letter-spacing: -.02em; margin-bottom: 16px; max-width: 640px; }
+.cover .lead { font-size: 17px; line-height: 27px; max-width: none; }
+.panel { flex: 1; background: var(--accent); border-radius: 32px 32px 0 0; margin: 0 24px; padding: 40px 40px 32px; display: flex; flex-direction: column; }
+.trail { list-style: none; display: flex; flex-direction: column; gap: 16px; }
+.trail li { display: flex; align-items: center; gap: 16px; background: var(--bg); border-radius: 999px; padding: 16px 24px 16px 16px; font: 500 19px/28px 'Inter', sans-serif; }
+.trail .num { width: 40px; height: 40px; background: var(--fg); color: #FBFBFB; font-size: 15px; }
+.panel-end { margin-top: auto; padding-top: 24px; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.panel-end p { font: 500 14px/20px 'Inter', sans-serif; }
+.pill-link { display: inline-block; background: var(--fg); color: #FBFBFB; font: 500 14px/20px 'Inter', sans-serif; padding: 10px 20px; border-radius: 999px; text-decoration: none; }
+.cover-foot { display: flex; justify-content: space-between; align-items: center; padding: 16px 56px; font-size: 11.5px; color: var(--muted); }
+.cover-foot img { height: 30px; display: block; }
+
+/* Página 2 */
+.three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 28px; }
+.three h2 { margin-bottom: 4px; }
+.three p { color: var(--muted); font-size: 13px; line-height: 20px; }
+.three > div { border-top: 2px solid var(--fg); padding-top: 12px; }
+.index { list-style: none; display: flex; flex-direction: column; }
+.index li { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.index span:last-child { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* Telas e legendas */
+.shot { position: relative; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; background: var(--bg); }
+.shot img { display: block; width: 100%; }
+.mark { position: absolute; transform: translate(-50%, -50%); box-shadow: 0 0 0 2px var(--fg); }
+.legend { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 28px; list-style: none; margin-top: 22px; }
+.legend li { display: flex; gap: 10px; }
+.legend h3 { font: 600 13px/20px 'Inter', sans-serif; }
+.legend p { font-size: 12.5px; line-height: 19px; color: var(--muted); }
+.callout { background: var(--surface); border-radius: 16px; padding: 18px 22px; }
+.callout h2 { margin-bottom: 4px; }
+.callout p { font-size: 13px; line-height: 20px; }
+.step-title { font: 600 18px/26px 'Montserrat', sans-serif; margin-bottom: 4px; }
+.step-text { color: var(--muted); margin-bottom: 14px; }
+
+.closing { margin-top: auto; background: var(--fg); color: #FBFBFB; border-radius: 16px; padding: 24px 28px; display: flex; gap: 24px; align-items: center; justify-content: space-between; }
+.closing h2 { font: 500 19px/27px 'Montserrat', sans-serif; margin-bottom: 4px; }
+.closing p { font-size: 13px; line-height: 20px; color: #C9C9C8; }
+.closing .pill-link { background: var(--accent); color: var(--fg); flex: none; }
+</style>
+</head>
+<body>
+
+<!-- Capa -->
+<section class="page cover">
+  <div class="cover-top">
+    <img src="marca/logo-vertical-dark.png" alt="ChicoChat+">
+    <h1>Como abrir um chamado no GLPI</h1>
+    <p class="lead">O caminho para pedir ajuda à TI quando o ChicoChat+ estiver fora do ar.</p>
+  </div>
+  <div class="panel">
+    <ol class="trail">
+      <li><span class="num">1</span>Acesse o GLPI</li>
+      <li><span class="num">2</span>Entre com o seu usuário de rede</li>
+      <li><span class="num">3</span>Abra o Catálogo de serviços</li>
+      <li><span class="num">4</span>Preencha o formulário</li>
+      <li><span class="num">5</span>Envie e acompanhe</li>
+    </ol>
+    <div class="panel-end">
+      <p>O endereço do GLPI</p>
+      <a class="pill-link" href="https://suporte.pedroleopoldo.mg.gov.br/">suporte.pedroleopoldo.mg.gov.br</a>
+    </div>
+  </div>
+  <div class="cover-foot">
+    <span>Prefeitura Municipal de Pedro Leopoldo</span>
+    <img src="marca/pl-digital-black.png" alt="Programa PL Digital">
+  </div>
+</section>
+
+<!-- Antes de começar -->
+<section class="page">
+  <span class="eyebrow">Antes de começar</span>
+  <h1>Quando usar este caminho</h1>
+  <p class="lead">O canal oficial de atendimento da TI é o ChicoChat+. Abra o chamado direto no GLPI quando o Chico estiver fora do ar.</p>
+
+  <div class="two" style="margin-top:24px;">
+    <div class="callout"><h2>Primeiro, o ChicoChat+</h2><p>O canal oficial para os seus pedidos à TI.<br><a href="https://chicochat.pl.mg.gov.br">chicochat.pl.mg.gov.br</a></p></div>
+    <div class="callout"><h2>Fora do ar? O GLPI</h2><p>Abra o chamado direto, seguindo este guia.<br><a href="https://suporte.pedroleopoldo.mg.gov.br/">suporte.pedroleopoldo.mg.gov.br</a></p></div>
+  </div>
+
+  <div class="three">
+    <div><h2>O que é o GLPI</h2><p>O sistema de chamados usado pela equipe de TI da Prefeitura.</p></div>
+    <div><h2>Tudo registrado</h2><p>Cada pedido recebe um número e fica documentado.</p></div>
+    <div><h2>Fácil de acompanhar</h2><p>Você vê a situação do seu chamado no próprio sistema, quando quiser.</p></div>
+  </div>
+
+  <hr class="rule">
+
+  <h2>Tenha em mãos</h2>
+  <ol class="steps" style="margin-top:12px;">
+    <li><span class="num">1</span><div><h3>Seu usuário e sua senha de rede</h3><p>São os mesmos que você usa para entrar no computador.</p></div></li>
+    <li><span class="num">2</span><div><h3>O IP da máquina</h3><p>Na área de trabalho, clique duas vezes no arquivo <strong>MostrarIP.bat</strong>. Se o computador com problema não liga, avise isso na descrição.</p></div></li>
+    <li><span class="num">3</span><div><h3>O que está acontecendo</h3><p>O que você vê, desde quando, se algo mudou antes e o que já tentou.</p></div></li>
+  </ol>
+
+  <div style="margin-top:auto;">
+    <h2>Neste guia</h2>
+    <ul class="index">
+      <li><span>Acesse e faça login</span><span>3</span></li>
+      <li><span>Abra o Catálogo de serviços</span><span>4</span></li>
+      <li><span>Preencha o formulário</span><span>5</span></li>
+      <li><span>Envie e acompanhe</span><span>6</span></li>
+    </ul>
+  </div>
+
+  <div class="foot"><span>Como abrir um chamado no GLPI</span><span>2</span></div>
+</section>
+
+<!-- Passos 1 e 2 -->
+<section class="page">
+  <span class="eyebrow">Passos 1 e 2</span>
+  <h1>Acesse e faça login</h1>
+  <p class="lead" style="margin-bottom:24px;">Funciona em qualquer navegador, como Chrome, Firefox ou Edge. Digite o endereço <a href="https://suporte.pedroleopoldo.mg.gov.br/">suporte.pedroleopoldo.mg.gov.br</a> e a tela de entrada vai abrir.</p>
+
+  <div class="shot">
+    <img src="capturas/login.png" alt="Tela de login do GLPI com quatro pontos numerados">
+    <span class="num mark" style="left:28.3%;top:48.5%;">1</span>
+    <span class="num mark" style="left:28.3%;top:60.7%;">2</span>
+    <span class="num mark" style="left:28.3%;top:74.2%;">3</span>
+    <span class="num mark" style="left:28.3%;top:89.8%;">4</span>
+  </div>
+
+  <ol class="legend">
+    <li><span class="num">1</span><div><h3>Usuário</h3><p>Seu usuário de rede, o mesmo que você usa para entrar no computador.</p></div></li>
+    <li><span class="num">3</span><div><h3>Origem de login</h3><p>Mantenha <strong>Prefeitura</strong> selecionado.</p></div></li>
+    <li><span class="num">2</span><div><h3>Senha</h3><p>Sua senha de rede, a mesma do computador.</p></div></li>
+    <li><span class="num">4</span><div><h3>Entrar</h3><p>Clique para acessar o sistema.</p></div></li>
+  </ol>
+
+  <div class="callout" style="margin-top:auto;margin-bottom:8px;">
+    <h2>Não conseguiu entrar?</h2>
+    <p>Escreva para <a href="mailto:ti@pedroleopoldo.mg.gov.br">ti@pedroleopoldo.mg.gov.br</a> e conte o que aconteceu.</p>
+  </div>
+
+  <div class="foot"><span>Como abrir um chamado no GLPI</span><span>3</span></div>
+</section>
+
+<!-- Passo 3 -->
+<section class="page">
+  <span class="eyebrow">Passo 3</span>
+  <h1>Abra o Catálogo de serviços</h1>
+  <p class="lead" style="margin-bottom:24px;">Depois do login, a tela inicial abre. São dois cliques até o formulário.</p>
+
+  <p class="step-title">Clique em Catálogo de serviços</p>
+  <p class="step-text">Fica no menu azul, no alto da tela.</p>
+  <div class="shot">
+    <img src="capturas/inicio.png" alt="Tela inicial do GLPI com a opção Catálogo de serviços marcada no menu">
+    <span class="num mark" style="left:39.9%;top:9.8%;">1</span>
+  </div>
+
+  <p class="step-title" style="margin-top:28px;">Escolha Reportar um problema</p>
+  <p class="step-text">O formulário do chamado abre em seguida.</p>
+  <div class="shot">
+    <img src="capturas/catalogo.png" alt="Catálogo de serviços do GLPI com a opção Reportar um problema marcada">
+    <span class="num mark" style="left:64.9%;top:72.6%;">2</span>
+  </div>
+
+  <div class="callout" style="margin-top:auto;margin-bottom:8px;">
+    <h2>Um atalho</h2>
+    <p>A tela inicial do GLPI também traz o cartão <strong>Reportar um problema</strong>, logo abaixo da busca.</p>
+  </div>
+
+  <div class="foot"><span>Como abrir um chamado no GLPI</span><span>4</span></div>
+</section>
+
+<!-- Passo 4 -->
+<section class="page">
+  <span class="eyebrow">Passo 4</span>
+  <h1>Preencha o formulário</h1>
+  <p class="lead" style="margin-bottom:18px;">Sem o Chico para fazer o resumo, é a sua descrição que o técnico vai ler. Quanto mais detalhe, mais rápido o atendimento.</p>
+
+  <div class="shot">
+    <img src="capturas/formulario.png" alt="Formulário de chamado do GLPI com sete campos numerados">
+    <span class="num mark" style="left:13.5%;top:5.3%;">1</span>
+    <span class="num mark" style="left:14.2%;top:17.1%;">2</span>
+    <span class="num mark" style="left:24.7%;top:28.9%;">3</span>
+    <span class="num mark" style="left:17.6%;top:40.6%;">4</span>
+    <span class="num mark" style="left:15.9%;top:52.1%;">5</span>
+    <span class="num mark" style="left:11.1%;top:63.9%;">6</span>
+    <span class="num mark" style="left:15.7%;top:75.7%;">7</span>
+  </div>
+
+  <ol class="legend" style="gap:9px 24px;margin-top:16px;">
+    <li><span class="num">1</span><div><h3>Urgência</h3><p>A prioridade do pedido.</p></div></li>
+    <li><span class="num">5</span><div><h3>Localização</h3><p>Onde você ou o equipamento está.</p></div></li>
+    <li><span class="num">2</span><div><h3>Categoria</h3><p>O tipo de problema, como Defeito &gt; Hardware.</p></div></li>
+    <li><span class="num">6</span><div><h3>Título</h3><p>Um resumo curto e objetivo.</p></div></li>
+    <li><span class="num">3</span><div><h3>Dispositivos do usuário</h3><p>O equipamento com problema, se estiver na lista.</p></div></li>
+    <li><span class="num">7</span><div><h3>Descrição (obrigatória)</h3><p>O problema, com detalhes.</p></div></li>
+    <li><span class="num">4</span><div><h3>Observadores</h3><p>Quem mais deve acompanhar, se houver.</p></div></li>
+  </ol>
+
+  <div class="callout" style="margin-top:14px;margin-bottom:6px;padding:14px 20px;">
+    <h2>O que escrever na descrição</h2>
+    <p>O que acontece, desde quando, se atinge só você ou o setor e o que já tentou. Inclua também o <strong>seu setor</strong> e o <strong>IP da máquina</strong>, que o técnico precisa para atender.</p>
+  </div>
+
+  <div class="foot"><span>Como abrir um chamado no GLPI</span><span>5</span></div>
+</section>
+
+<!-- Passo 5 -->
+<section class="page">
+  <span class="eyebrow">Passo 5</span>
+  <h1>Envie e acompanhe</h1>
+  <p class="lead" style="margin-bottom:22px;">Revise o que preencheu e clique em <strong>Enviar</strong>. A confirmação aparece na tela, e o chamado já está com a equipe de TI.</p>
+
+  <div class="shot">
+    <img src="capturas/enviado.png" alt="Tela do GLPI confirmando o envio do formulário">
+    <span class="num mark" style="left:68%;top:88%;">1</span>
+  </div>
+  <p class="small" style="margin:8px 0 22px;"><strong>Ver meus chamados (1)</strong> leva à lista abaixo, que também fica no menu <strong>Chamados</strong>.</p>
+
+  <div class="shot">
+    <img src="capturas/chamados.png" alt="Lista de chamados do GLPI com as colunas ID, Status e Última atualização marcadas">
+    <span class="num mark" style="left:6.5%;top:54.3%;">2</span>
+    <span class="num mark" style="left:52.6%;top:54.3%;">3</span>
+    <span class="num mark" style="left:69.6%;top:54.3%;">4</span>
+  </div>
+
+  <ol class="legend" style="grid-template-columns:repeat(3,1fr);gap:14px 20px;">
+    <li><span class="num">2</span><div><h3>ID</h3><p>O número de protocolo do seu chamado.</p></div></li>
+    <li><span class="num">3</span><div><h3>Status</h3><p>Em que etapa o atendimento está.</p></div></li>
+    <li><span class="num">4</span><div><h3>Última atualização</h3><p>A última vez que você ou o suporte editou o chamado.</p></div></li>
+  </ol>
+
+  <div class="two" style="margin-top:20px;">
+    <div class="callout"><h2>Atualizações por e-mail</h2><p>O GLPI avisa por e-mail quando o seu chamado é atualizado.</p></div>
+    <div class="callout"><h2>Dúvidas</h2><p>Escreva para <a href="mailto:ti@pedroleopoldo.mg.gov.br">ti@pedroleopoldo.mg.gov.br</a>.</p></div>
+  </div>
+
+  <div class="closing" style="margin-bottom:8px;">
+    <div>
+      <h2>Trabalhamos a todo vapor para responder o mais rápido possível.</h2>
+      <p>Quando o ChicoChat+ voltar, use-o nos próximos pedidos: é o canal oficial de atendimento da TI.</p>
+    </div>
+    <a class="pill-link" href="https://chicochat.pl.mg.gov.br">Abrir o ChicoChat+</a>
+  </div>
+
+  <div class="foot"><span>Como abrir um chamado no GLPI</span><span>6</span></div>
+</section>
+
+</body>
+</html>
