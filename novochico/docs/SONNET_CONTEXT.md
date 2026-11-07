@@ -788,7 +788,7 @@ Ao encontrar uma destas, siga o padrão. Sem padrão, pare e pergunte.
 | **PEND-02** | **Decidida:** repositório segue público e legado segue no ar (ADR-031). Falta: `codebaseantiga/` fica versionada? Criar `.gitignore` na raiz? | Responsável | Não alterar a raiz; `LEGACY_AUDIT.md` fora do Git |
 | **PEND-03** | **Decidida:** o banco novo começa vazio (ADR-028) | — | ADR-028 |
 | **PEND-04** | **Decidida quanto à importação** (ADR-028). Textos de categoria sem fonte no código serão escritos pela SATD | SATD | Seed mínimo |
-| **PEND-05** | **Não há instância de teste** (ADR-029). Falta: versão do GLPI em produção, caminho do token, filtro de usuário, `TeamMember`, `request_type` 10, entidade, tipos, categorias ITIL. Consultar `/api.php/<versão>/doc` | TI / GLPI | Replicar o legado |
+| **PEND-05** | **Abertura real verificada em 07/11/2026:** chamado, solicitante, resumo e link da conversa chegaram ao GLPI. **Não há instância de teste** (ADR-029). Falta: versão do GLPI em produção, caminho do token, filtro de usuário, `TeamMember`, `request_type` 10, entidade, tipos, categorias ITIL. Consultar `/api.php/<versão>/doc` | TI / GLPI | Replicar o legado |
 | **PEND-06** | Impressoras: decidido (Anexo E); falta o endereço do site da Repros. O pedido de acesso é via Sonner ou TI? Orientações de senha ainda valem? Tudo isso agora se resolve publicando instruções, sem bloquear o desenvolvimento | SATD | Anexo A e Anexo E |
 | **PEND-07** | LGPD: base legal, retenção de conversas e logs, encarregado, texto do aviso, leitura por admins, envio ao Google, destino dos dados do sistema antigo | Prefeitura | Reter sem expurgo |
 | **PEND-08** | Servidor: SO, Docker, proxy e TLS, domínio final, saída para Gemini, Google e GLPI, backups | TI | Compose de referência |
