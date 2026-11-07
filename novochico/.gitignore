@@ -19,3 +19,6 @@ docs/LEGACY_AUDIT.md
 *.sql.gz
 .DS_Store
 Thumbs.db
+
+# Ambiente de producao (segredos)
+deploy/production.env

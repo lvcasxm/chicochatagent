@@ -1,0 +1,64 @@
+# Implantação de produção do ChicoChat+ (F10). Veja docs/OPERATIONS.md.
+#
+#   cp deploy/production.env.example deploy/production.env   # e preencha (nunca versione)
+#   docker compose -f compose.prod.yml --env-file deploy/production.env up -d --build
+#
+# O banco não publica porta. A aplicação escuta só no loopback do servidor: o proxy reverso
+# (TLS) da Prefeitura é quem fala com a rede (ADR-041).
+name: chicochat
+
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Preencha deploy/production.env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Preencha deploy/production.env}
+      POSTGRES_DB: ${POSTGRES_DB:?Preencha deploy/production.env}
+    volumes:
+      - chico_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    security_opt:
+      - no-new-privileges:true
+
+  # Roda uma vez a cada implantação: migrations (só para frente) e seed (seguro de repetir).
+  migrate:
+    build: .
+    image: chicochat:${CHICOCHAT_TAG:-local}
+    restart: 'no'
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: deploy/production.env
+    command:
+      - sh
+      - -c
+      - node_modules/.bin/tsx apps/api/src/db/migrate.ts && node_modules/.bin/tsx apps/api/src/db/seed/run.ts
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+  app:
+    image: chicochat:${CHICOCHAT_TAG:-local}
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    env_file: deploy/production.env
+    ports:
+      - '127.0.0.1:${APP_PORT:-3000}:3000'
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 15s
+
+volumes:
+  chico_pgdata:

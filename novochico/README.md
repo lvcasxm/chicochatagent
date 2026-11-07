@@ -44,6 +44,10 @@ Por padrão a IA é o Gemini (`AI_PROVIDER=gemini`), que precisa de `GEMINI_API_
 
 O painel de administração (`/admin`, só para o papel `admin`) usa a mesma chave. A Análise IA e o assistente de instruções usam `GEMINI_INSIGHTS_MODEL` (padrão `gemini-2.5-flash`); com `AI_PROVIDER=fake` eles respondem com textos de desenvolvimento.
 
+## Implantação
+
+`Dockerfile` e `compose.prod.yml` (a API serve a interface; o banco não publica porta), com o modelo de ambiente em `deploy/production.env.example` e os scripts de backup e restauração em `deploy/`. O passo a passo, o proxy reverso, o plano de virada e como mover para outro servidor estão em [docs/OPERATIONS.md](docs/OPERATIONS.md). Nada é implantado sem autorização.
+
 ## Testes de ponta a ponta
 
 `npm run e2e` sobe um banco novo (`chicochat_e2e`, no PostgreSQL do Compose), constrói a interface e a serve pela API com a IA e o GLPI de mentira, e roda a suíte no Chrome instalado, em quatro combinações: desktop e celular, tema claro e escuro. Precisa de `TEST_DATABASE_URL` no `.env`. Em produção, a API serve a interface quando `WEB_DIST_DIR` aponta para o build do web.

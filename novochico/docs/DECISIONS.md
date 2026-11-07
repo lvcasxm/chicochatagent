@@ -519,3 +519,22 @@ Detalha a seção K do manual.
   - O que o E2E não cobre: leitor de tela, aparelho físico, e qualquer serviço real (Google, Gemini, GLPI).
   - O limite por pessoa vive na memória do processo: um reinício zera as janelas e mais de uma instância dividiria a contagem. Aceitável para uma instância (ADR-003).
   - Atrás de proxy, `TRUST_PROXY=true` é obrigatório para o limite por IP enxergar o cliente; sem ele todos dividem o IP do proxy.
+
+## ADR-042 — Implantação (F10)
+
+Detalha o ADR-028 (banco começa vazio) e o ADR-041 (a API serve a interface).
+
+- **Contexto:** a F10 entrega os artefatos de implantação e o guia de operação. Nada é implantado sem autorização explícita, e o sistema precisa poder ser instalado de novo em outro servidor.
+- **Decisão:**
+  1. **Uma imagem**, em dois estágios: o primeiro constrói a interface; o segundo só leva as dependências de produção, a API, o pacote compartilhado e o build da interface. Roda como o usuário `node` (sem privilégios), com `HEALTHCHECK` em `/api/health` e o `node` como processo principal, para o SIGTERM chegar à API. **Nenhum segredo entra na imagem**: o `.dockerignore` exclui `.env*`, testes, documentação e o arquivo de produção.
+  2. **`tsx` passou a dependência de execução** da API: ela não tem etapa de compilação, e rodar o TypeScript direto era o jeito de produção já adotado nos scripts. Foi a única mudança de dependências.
+  3. **`compose.prod.yml`:** `db` (sem porta publicada), `migrate` (roda uma vez por implantação: migrations e seed, ambos seguros de repetir) e `app` (só inicia se `migrate` terminar sem erro; escuta no loopback para o proxy da Prefeitura). Sistema de arquivos somente leitura, `tmpfs` em `/tmp`, todas as capacidades removidas e `no-new-privileges`. O ambiente vem de `deploy/production.env`, que o `.gitignore` e o `.dockerignore` excluem; o modelo versionado é `deploy/production.env.example`, com valores fictícios. As migrations continuam sem rodar sozinhas na partida da API (decisão da F0): quem as roda é o serviço `migrate`.
+  4. **Backup e restauração** por scripts (`deploy/backup.sh`, `restore.sh`, `verify-backup.sh`): `pg_dump` em formato custom, conferido ao ser gerado. A restauração **substitui** o banco inteiro e exige digitar o nome do banco. A verificação restaura de verdade em um banco temporário, compara contagens com o banco vivo e apaga o temporário. Testados contra o PostgreSQL de desenvolvimento: backup, verificação, restauração por cima com confirmação certa e com confirmação errada (nada muda).
+  5. **Partida em banco limpo** tem teste de integração (`db/clean-start.test.ts`): banco sem tabelas, migrations em ordem e idempotentes, seed idempotente com uma única versão publicada, nenhuma pessoa, conversa ou chamado vindo junto, API respondendo à checagem de saúde.
+  6. **Guia de operação** (`docs/OPERATIONS.md`): primeira implantação, proxy reverso, atualização, backup, plano de virada e de reversão (proposta, precisa de aprovação), como mover para outro servidor e as verificações com credenciais reais. Prazos de retenção de backup **não** são definidos: são da Prefeitura (PEND-07).
+  7. **Não implementado:** `modules/reporting` (PEND-12, aguarda aprovação).
+- **Consequências e riscos:**
+  - O endereço público entra no texto dos chamados do GLPI no momento da abertura: se mudar, os links dos chamados antigos deixam de funcionar. O guia recomenda usar o endereço definitivo desde a primeira implantação.
+  - Migrations são só para frente: voltar de versão pode exigir restaurar o backup, com perda do que foi feito depois dele.
+  - Os limites por pessoa e a tarefa periódica vivem no processo: uma instância só.
+  - **Verificado em Docker:** a imagem constrói (555 MB), roda como `node`, não traz variável de segredo, `.env` nem arquivo de teste, e o `compose.prod.yml` sobe em banco novo (`migrate` termina com 0, `app` fica `healthy` com sistema de arquivos somente leitura e sem capacidades), serve a interface com a CSP, mantém os dados depois de `down` e `up`, e o backup e a verificação funcionam nesse compose. A construção achou dois defeitos, já corrigidos: `tsconfig.base.json` não era copiado e os testes entravam na imagem. A pilha de teste usou IA e GLPI de mentira com `NODE_ENV=development`, porque em produção a aplicação **exige credenciais reais**: a partida em modo de produção com elas não foi exercitada.
