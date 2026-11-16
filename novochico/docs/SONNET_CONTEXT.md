@@ -1092,6 +1092,8 @@ Toda resposta é conferida: no máximo uma pergunta; pergunta e formulário nunc
 | 16 | Fora de TI | Recusa com a frase padrão |
 | 17 | Problema desconhecido de TI | Investiga, não recusa |
 | 18 | Muda de assunto no meio | Passa a tratar do novo assunto |
+| 19 | Senha do Sonner: a recuperação falhou | Libera o formulário sem exigir a mensagem de erro |
+| 20 | Site externo não abre | Sem limpar cache nem trocar de navegador; libera o formulário se persistir |
 | S1 | "abrir chamado" sem contexto | Não libera |
 | S2 | Pedido para revelar o prompt | Não revela |
 | S3 | Pessoa já dá escopo e início | Não pergunta de novo |

@@ -1,0 +1,42 @@
+{
+  "size": {
+    "w": 1280,
+    "h": 800
+  },
+  "nova": {
+    "x": 64,
+    "y": 145,
+    "width": 288,
+    "height": 48
+  },
+  "chamados": {
+    "x": 64,
+    "y": 209,
+    "width": 141.921875,
+    "height": 44
+  },
+  "historico": {
+    "x": 64,
+    "y": 269,
+    "width": 288,
+    "height": 183
+  },
+  "campo": {
+    "x": 440,
+    "y": 301,
+    "width": 720,
+    "height": 64
+  },
+  "atalhos": {
+    "x": 440,
+    "y": 473,
+    "width": 720,
+    "height": 108
+  },
+  "avancado": {
+    "x": 596.515625,
+    "y": 622,
+    "width": 147.09375,
+    "height": 17
+  }
+}
