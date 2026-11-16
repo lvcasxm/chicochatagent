@@ -118,7 +118,7 @@ Como usar:
 
 - **Contexto:** hoje o formulário abre por decisão do cliente, e a API aceita qualquer chamada (S-02).
 - **Problema:** a triagem precisa valer de fato, sem bloquear quem precisa do GLPI.
-- **Decisão:** quando a IA escala, o servidor grava `conversations.ticket_form_unlocked_at`. `POST /tickets` exige esse campo, salvo para admin. O atalho "usuário avançado" continua levando ao portal GLPI.
+- **Decisão:** quando a IA escala, o servidor grava `conversations.ticket_form_unlocked_at`. `POST /tickets` exige esse campo, salvo para admin. O link "Abrir chamado no GLPI", no rodapé, continua levando ao portal GLPI.
 - **Justificativa:** cumpre RN-08 a RN-10 com regra no servidor; não há perda, pois o portal segue disponível.
 - **Alternativas:** não condicionar (permite pular a triagem pela API); exigir contagem mínima de tentativas (regra nova não presente no legado).
 - **Consequências:** a IA continua decidindo quando escalar; o backend garante apenas que a decisão ocorreu. Se a IA falhar, o usuário usa o portal.

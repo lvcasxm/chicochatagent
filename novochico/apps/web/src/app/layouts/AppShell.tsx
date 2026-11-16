@@ -8,6 +8,8 @@ export interface AppShellProps {
   actions?: ReactNode;
   /** Largura do conteúdo: `reading` (720 px, para o chat) ou `page` (1200 px). */
   width?: 'reading' | 'page';
+  /** Texto curto à esquerda do rodapé (ex.: o link do portal GLPI). A marca do programa fica à direita. */
+  footerNote?: ReactNode;
   children: ReactNode;
 }
 
@@ -15,7 +17,7 @@ export interface AppShellProps {
  * Moldura das telas: cabeçalho de 80 px sobre o fundo, sem caixa nem vidro, o conteúdo numa
  * margem única de 24 px e um rodapé sem dado técnico (design system do Portal do Cidadão).
  */
-export function AppShell({ actions, width = 'page', children }: AppShellProps) {
+export function AppShell({ actions, width = 'page', footerNote, children }: AppShellProps) {
   const column = cx('mx-auto w-full px-6', width === 'reading' ? 'max-w-reading' : 'max-w-page');
   return (
     <div className="flex min-h-dvh flex-col">
@@ -43,8 +45,10 @@ export function AppShell({ actions, width = 'page', children }: AppShellProps) {
       </main>
       <footer className="border-t border-border">
         <div className="mx-auto flex w-full max-w-page flex-wrap items-center justify-between gap-4 px-6 py-6">
-          <p className="type-small text-fg-muted">Prefeitura Municipal de Pedro Leopoldo</p>
-          <ProgramMark />
+          {footerNote && <p className="type-small text-fg-muted">{footerNote}</p>}
+          <div className="ml-auto">
+            <ProgramMark />
+          </div>
         </div>
       </footer>
     </div>
