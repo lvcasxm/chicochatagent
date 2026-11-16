@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Como usar o ChicoChat+</title>
+<meta name="description" content="Guia rápido de uso do ChicoChat+, o canal de atendimento de TI da Prefeitura Municipal de Pedro Leopoldo.">
+<meta name="author" content="Prefeitura Municipal de Pedro Leopoldo">
+<style>
+@font-face { font-family: 'Inter'; font-weight: 100 900; src: url('marca/inter-latin-wght-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Montserrat'; font-weight: 100 900; src: url('marca/montserrat-latin-wght-normal.woff2') format('woff2'); }
+
+@page { size: 210mm 297mm; margin: 0; }
+:root {
+  --bg: #FBFBFB; --fg: #111110; --muted: #5C5C5B; --accent: #24BCEC;
+  --surface: #F0F0F0; --border: #E0E0DF; --strong: #7A7A7A;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--fg); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { font: 400 13.5px/21px 'Inter', sans-serif; }
+a { color: inherit; text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+strong { font-weight: 600; }
+
+.page { position: relative; width: 210mm; height: 297mm; overflow: hidden; background: var(--bg); break-after: page; padding: 56px 56px 72px; display: flex; flex-direction: column; }
+.page:last-child { break-after: auto; }
+
+.eyebrow { display: inline-block; align-self: flex-start; background: var(--accent); color: var(--fg); font: 600 11px/16px 'Inter', sans-serif; letter-spacing: .02em; padding: 4px 12px; border-radius: 999px; margin-bottom: 16px; }
+h1 { font: 500 33px/41px 'Montserrat', sans-serif; letter-spacing: -.01em; margin-bottom: 12px; }
+.lead { font-size: 15.5px; line-height: 24px; color: var(--muted); max-width: 610px; }
+h2 { font: 600 15px/22px 'Montserrat', sans-serif; margin-bottom: 8px; }
+.small { font-size: 11.5px; line-height: 17px; color: var(--muted); }
+
+.foot { position: absolute; left: 56px; right: 56px; bottom: 28px; display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; line-height: 16px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 10px; }
+
+/* Listas numeradas e marcadores: o número é o elo entre a imagem e o texto. */
+.num { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; background: var(--accent); color: var(--fg); font: 600 12px/1 'Inter', sans-serif; }
+.steps { list-style: none; display: flex; flex-direction: column; gap: 16px; }
+.steps li { display: flex; gap: 12px; }
+.steps h3 { font: 600 13.5px/21px 'Inter', sans-serif; }
+.steps p { color: var(--muted); }
+.rule { border: 0; border-top: 1px solid var(--border); margin: 28px 0; }
+
+/* Capa */
+.cover { padding: 0; }
+.cover-top { padding: 56px 56px 40px; }
+.cover-top img { height: 76px; display: block; margin-bottom: 64px; }
+.cover h1 { font-size: 54px; line-height: 62px; letter-spacing: -.02em; margin-bottom: 16px; max-width: 600px; }
+.cover .lead { font-size: 17px; line-height: 27px; max-width: 520px; }
+.panel { flex: 1; background: var(--accent); border-radius: 32px 32px 0 0; margin: 0 24px; padding: 40px 40px 32px; display: flex; flex-direction: column; gap: 18px; }
+.bubble { border-radius: 20px; padding: 18px 24px; font-size: 19px; line-height: 28px; max-width: 84%; }
+.bubble.me { align-self: flex-end; background: var(--fg); color: #FBFBFB; }
+.bubble.chico { align-self: flex-start; background: var(--bg); color: var(--fg); }
+.panel-end { margin-top: auto; display: flex; justify-content: space-between; align-items: center; color: var(--fg); }
+.pill-link { display: inline-block; background: var(--fg); color: #FBFBFB; font: 500 14px/20px 'Inter', sans-serif; padding: 10px 20px; border-radius: 999px; text-decoration: none; }
+.cover-foot { display: flex; justify-content: space-between; align-items: center; padding: 16px 56px; font-size: 11.5px; color: var(--muted); }
+.cover-foot img { height: 30px; display: block; }
+
+/* Parte 1 */
+.three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 28px; }
+.three h2 { margin-bottom: 4px; }
+.three p { color: var(--muted); font-size: 13px; line-height: 20px; }
+.three > div { border-top: 2px solid var(--fg); padding-top: 12px; }
+.index { list-style: none; display: flex; flex-direction: column; }
+.index li { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.index span:last-child { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Parte 2 */
+.shot { position: relative; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; background: var(--bg); }
+.shot img { display: block; width: 100%; }
+.mark { position: absolute; transform: translate(-50%, -50%); box-shadow: 0 0 0 2px var(--fg); }
+.legend { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 28px; list-style: none; margin-top: 24px; }
+.legend li { display: flex; gap: 10px; }
+.legend h3 { font: 600 13px/20px 'Inter', sans-serif; }
+.legend p { font-size: 12.5px; line-height: 19px; color: var(--muted); }
+.callout { background: var(--surface); border-radius: 16px; padding: 18px 22px; }
+.callout h2 { margin-bottom: 4px; }
+.callout p { font-size: 13px; line-height: 20px; }
+
+/* Parte 3 */
+.compare { display: grid; grid-template-columns: 5fr 7fr; gap: 16px; margin-top: 24px; }
+.compare h2 { font: 600 12px/18px 'Inter', sans-serif; margin-bottom: 8px; }
+.say { border-radius: 16px; padding: 14px 16px; font-size: 13.5px; line-height: 21px; }
+.say.poor { background: var(--surface); }
+.say.good { background: var(--accent); }
+.compare .small { margin-top: 8px; }
+.tell { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 28px; }
+.tell li { padding-left: 16px; position: relative; font-size: 13px; line-height: 20px; }
+.tell li::before { content: ''; position: absolute; left: 0; top: 7px; width: 6px; height: 6px; border-radius: 999px; background: var(--fg); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+.plain { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.plain li { font-size: 13px; line-height: 20px; color: var(--muted); }
+.plain strong { color: var(--fg); }
+.summary { margin-top: auto; margin-bottom: 8px; background: var(--surface); border-radius: 16px; padding: 22px 24px; }
+.summary .small { margin-bottom: 14px; font-size: 12.5px; line-height: 19px; }
+.summary dl { display: grid; grid-template-columns: 148px 1fr; gap: 6px 16px; font-size: 12.5px; line-height: 19px; }
+.summary dt { font-weight: 600; }
+
+/* Parte 4 */
+.open { display: grid; grid-template-columns: 1fr 268px; gap: 32px; margin-top: 28px; align-items: start; }
+.conv { height: 158px; }
+.conv img { position: absolute; bottom: 0; left: 0; }
+
+/* Parte 5 */
+.timeline { list-style: none; margin-top: 26px; }
+.timeline li { display: flex; gap: 14px; padding-bottom: 18px; position: relative; }
+.timeline li:not(:last-child)::before { content: ''; position: absolute; left: 11.5px; top: 28px; bottom: 2px; width: 1px; background: var(--strong); }
+.timeline h3 { font: 600 13.5px/22px 'Inter', sans-serif; }
+.timeline p { color: var(--muted); font-size: 13px; line-height: 20px; }
+.closing { margin-top: auto; background: var(--fg); color: #FBFBFB; border-radius: 16px; padding: 24px 28px; display: flex; gap: 24px; align-items: center; justify-content: space-between; }
+.closing h2 { font: 500 19px/27px 'Montserrat', sans-serif; margin-bottom: 4px; }
+.closing p { font-size: 13px; line-height: 20px; color: #C9C9C8; }
+.closing .pill-link { background: var(--accent); color: var(--fg); flex: none; }
+</style>
+</head>
+<body>
+
+<!-- Capa -->
+<section class="page cover">
+  <div class="cover-top">
+    <img src="marca/logo-vertical-dark.png" alt="ChicoChat+">
+    <h1>Como usar o ChicoChat+</h1>
+    <p class="lead">Guia rápido para pedir ajuda à TI da Prefeitura: onde clicar, como descrever o problema e o que acontece depois.</p>
+  </div>
+  <div class="panel">
+    <div class="bubble me">Meu computador ficou muito lento desde ontem, depois de uma atualização.</div>
+    <div class="bubble chico">Isso acontece só no seu computador ou outros colegas do setor também notaram?</div>
+    <div class="bubble me">Só no meu.</div>
+    <div class="bubble chico">Certo. Vou liberar o formulário para abrir o chamado.</div>
+    <div class="panel-end">
+      <a class="pill-link" href="https://chicochat.pl.mg.gov.br">chicochat.pl.mg.gov.br</a>
+      <span style="font-weight:500;">Sem instalar nada</span>
+    </div>
+  </div>
+  <div class="cover-foot">
+    <span>Prefeitura Municipal de Pedro Leopoldo</span>
+    <img src="marca/pl-digital-black.png" alt="Programa PL Digital">
+  </div>
+</section>
+
+<!-- Parte 1 -->
+<section class="page">
+  <span class="eyebrow">O que é</span>
+  <h1>O canal de atendimento de TI da Prefeitura</h1>
+  <p class="lead">O ChicoChat+ é um assistente de inteligência artificial feito para os servidores de Pedro Leopoldo. Você conta o problema com as suas palavras, como contaria a um colega, e ele cuida do resto.</p>
+
+  <div class="three">
+    <div><h2>Entende</h2><p>Faz uma pergunta de cada vez para descobrir o que está acontecendo.</p></div>
+    <div><h2>Orienta</h2><p>Sugere o que você pode tentar na hora, quando o problema tem solução simples.</p></div>
+    <div><h2>Encaminha</h2><p>Se precisar de um técnico, libera o chamado no GLPI com um resumo da conversa.</p></div>
+  </div>
+
+  <hr class="rule">
+
+  <h2>Para entrar</h2>
+  <ol class="steps" style="margin-top:12px;">
+    <li><span class="num">1</span><div><h3>Abra o endereço no navegador</h3><p>Acesse <a href="https://chicochat.pl.mg.gov.br">chicochat.pl.mg.gov.br</a>. Funciona no computador e no celular, sem instalar nada.</p></div></li>
+    <li><span class="num">2</span><div><h3>Entre com a sua conta institucional</h3><p>Clique em <strong>Entrar com a conta Google institucional</strong> e use o seu e-mail da Prefeitura.</p></div></li>
+    <li><span class="num">3</span><div><h3>No primeiro acesso, leia o aviso de privacidade</h3><p>Depois de aceitar, a tela inicial abre e você já pode conversar.</p></div></li>
+  </ol>
+
+  <div style="margin-top:auto;">
+  <h2>Neste guia</h2>
+  <ul class="index">
+    <li><span>Onde fica cada coisa</span><span>3</span></li>
+    <li><span>Como conversar com o Chico</span><span>4</span></li>
+    <li><span>Como o chamado é aberto</span><span>5</span></li>
+    <li><span>Depois de abrir o chamado</span><span>6</span></li>
+  </ul>
+  </div>
+
+  <div class="foot"><span>Como usar o ChicoChat+</span><span>2</span></div>
+</section>
+
+<!-- Parte 2 -->
+<section class="page">
+  <span class="eyebrow">Onde fica cada coisa</span>
+  <h1>A tela inicial</h1>
+  <p class="lead" style="margin-bottom:22px;">Tudo o que você precisa está aqui. O caminho principal é o campo de mensagem.</p>
+
+  <div class="shot">
+    <img src="capturas/inicio.png" alt="Tela inicial do ChicoChat+ com seis pontos numerados">
+    <span class="num mark" style="left:3%;top:21.1%;">1</span>
+    <span class="num mark" style="left:18.6%;top:28.9%;">2</span>
+    <span class="num mark" style="left:3%;top:37.5%;">3</span>
+    <span class="num mark" style="left:32%;top:41.6%;">4</span>
+    <span class="num mark" style="left:32%;top:62.1%;">5</span>
+    <span class="num mark" style="left:60.6%;top:78.9%;">6</span>
+  </div>
+
+  <ol class="legend">
+    <li><span class="num">1</span><div><h3>Nova conversa</h3><p>Começa um atendimento do zero. Use uma conversa para cada problema.</p></div></li>
+    <li><span class="num">4</span><div><h3>Campo de mensagem</h3><p>Escreva aqui o que está acontecendo. É por onde quase tudo começa.</p></div></li>
+    <li><span class="num">2</span><div><h3>Meus chamados</h3><p>Lista os chamados que você abriu e a situação de cada um.</p></div></li>
+    <li><span class="num">5</span><div><h3>Atalhos</h3><p>Pílulas que iniciam a conversa nos assuntos mais comuns. Sistemas GRP Sonner abre o guia em PDF.</p></div></li>
+    <li><span class="num">3</span><div><h3>Histórico</h3><p>Suas conversas anteriores. Clique para continuar uma delas; a lixeira a tira da lista.</p></div></li>
+    <li><span class="num">6</span><div><h3>Sou usuário avançado</h3><p>Leva direto ao portal do GLPI, sem conversar com o Chico.</p></div></li>
+  </ol>
+
+  <div class="callout" style="margin-top:24px;">
+    <h2>Quero abrir um chamado. Por onde começo?</h2>
+    <p>Pelo campo de mensagem <strong>(4)</strong> ou por um atalho <strong>(5)</strong>. O Chico entende o problema e libera o formulário quando for preciso. Se você já sabe exatamente o que pedir, use <strong>Sou usuário avançado (6)</strong>.</p>
+  </div>
+
+  <p class="small" style="margin-top:14px;">No celular, o histórico e Meus chamados ficam no botão <strong>Conversas</strong>. Telas com dados fictícios.</p>
+
+  <div class="foot"><span>Como usar o ChicoChat+</span><span>3</span></div>
+</section>
+
+<!-- Parte 3 -->
+<section class="page">
+  <span class="eyebrow">Como conversar com o Chico</span>
+  <h1>Quanto mais detalhe, mais rápido</h1>
+  <p class="lead">Uma boa primeira mensagem poupa perguntas e agiliza o chamado. E facilita a vida do técnico, que vai ler o resumo da sua conversa antes de atender.</p>
+
+  <div class="compare">
+    <div>
+      <h2>Assim o Chico precisa perguntar tudo</h2>
+      <div class="say poor">“Meu computador está com defeito.”</div>
+    </div>
+    <div>
+      <h2>Assim o atendimento anda</h2>
+      <div class="say good">“O computador da recepção ficou muito lento desde ontem à tarde, depois de uma atualização do Windows. Demora uns 5 minutos para abrir o e-mail. Já reiniciei duas vezes.”</div>
+    </div>
+  </div>
+
+  <hr class="rule">
+
+  <h2>O que contar</h2>
+  <ul class="tell" style="margin-top:12px;">
+    <li><strong>O que acontece:</strong> o que você vê, e a mensagem de erro, se houver.</li>
+    <li><strong>Desde quando:</strong> quando começou e se algo mudou antes disso.</li>
+    <li><strong>Em quê:</strong> qual equipamento, sistema ou site.</li>
+    <li><strong>Com quem:</strong> só com você ou com outras pessoas do setor.</li>
+    <li style="grid-column:1 / -1;"><strong>O que já tentou:</strong> reiniciar, conferir cabos, usar outro navegador. Se não tentou nada, tudo bem: diga isso.</li>
+  </ul>
+
+  <hr class="rule">
+
+  <div class="two">
+    <div>
+      <h2>Durante a conversa</h2>
+      <ul class="plain">
+        <li><strong>Escreva do seu jeito.</strong> Não precisa de termos técnicos.</li>
+        <li><strong>Responda a pergunta da vez.</strong> O Chico faz uma por mensagem, e cada resposta entra no resumo.</li>
+        <li><strong>Diga se a sugestão resolveu ou não.</strong> É isso que define o próximo passo.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>O que não precisa fazer</h2>
+      <ul class="plain">
+        <li><strong>Passar nome, setor ou IP na conversa.</strong> O nome vem da sua conta; setor e IP vão no formulário.</li>
+        <li><strong>Pedir o chamado logo de início.</strong> O Chico entende o problema antes de liberar.</li>
+        <li><strong>Abrir o gabinete, trocar peças ou formatar.</strong> Isso é com a equipe técnica.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="summary">
+    <h2>O que o técnico recebe</h2>
+    <p class="small">O Chico transforma a conversa em um resumo que segue no chamado. Com a mensagem do exemplo, ficaria mais ou menos assim:</p>
+    <dl>
+      <dt>Problema</dt><dd>Computador da recepção muito lento.</dd>
+      <dt>Contexto</dt><dd>Começou ontem à tarde, depois de uma atualização do Windows.</dd>
+      <dt>O que acontece</dt><dd>O e-mail leva cerca de 5 minutos para abrir. Só neste computador.</dd>
+      <dt>O que já foi tentado</dt><dd>Reiniciar duas vezes, sem melhora.</dd>
+    </dl>
+  </div>
+
+  <div class="foot"><span>Como usar o ChicoChat+</span><span>4</span></div>
+</section>
+
+<!-- Parte 4 -->
+<section class="page">
+  <span class="eyebrow">Como o chamado é aberto</span>
+  <h1>Quando o Chico não resolve, vira chamado</h1>
+  <p class="lead">Se o problema precisar de um técnico, o formulário é liberado na própria conversa. Você preenche poucos dados e envia.</p>
+
+  <div class="open">
+    <div>
+      <ol class="steps">
+        <li><span class="num">1</span><div><h3>Clique em Abrir chamado</h3><p>O botão aparece na conversa quando o Chico libera a abertura.</p></div></li>
+        <li><span class="num">2</span><div><h3>Informe o seu setor</h3><p>Seu nome e e-mail já vêm da sua conta. Se o chamado for para outra pessoa, marque a opção e informe os dados dela.</p></div></li>
+        <li><span class="num">3</span><div><h3>Informe o IP da máquina</h3><p>Na área de trabalho, clique duas vezes no arquivo <strong>MostrarIP.bat</strong>. Se o computador não liga, marque <strong>Não tenho acesso ao IP</strong>.</p></div></li>
+        <li><span class="num">4</span><div><h3>Envie</h3><p>O número do chamado aparece na tela, e o resumo da conversa segue junto para o técnico. Se você já tiver aberto um chamado parecido, o Chico avisa antes.</p></div></li>
+      </ol>
+
+      <div class="shot conv" style="margin-top:24px;">
+        <img src="capturas/conversa.png" alt="Conversa com o aviso de abertura de chamado liberada e o botão Abrir chamado">
+      </div>
+    </div>
+    <div class="shot">
+      <img src="capturas/formulario.png" alt="Formulário de abertura de chamado com setor e IP preenchidos">
+    </div>
+  </div>
+
+  <div class="callout" style="margin-top:auto;">
+    <h2>E se o problema for resolvido na conversa?</h2>
+    <p>Confirme para o Chico que deu certo e pronto: nenhum chamado é aberto. Se preferir não usar o formulário, a opção <strong>Prefiro abrir pelo portal</strong> leva você ao GLPI.</p>
+  </div>
+  <p class="small" style="margin:12px 0 8px;">Telas com dados fictícios.</p>
+
+  <div class="foot"><span>Como usar o ChicoChat+</span><span>5</span></div>
+</section>
+
+<!-- Parte 5 -->
+<section class="page">
+  <span class="eyebrow">Depois de abrir o chamado</span>
+  <h1>Você acompanha tudo de perto</h1>
+  <p class="lead">O chamado fica registrado no GLPI, o sistema usado pela equipe de TI. A partir daí:</p>
+
+  <ol class="timeline">
+    <li><span class="num">1</span><div><h3>Você recebe as atualizações por e-mail</h3><p>O GLPI avisa no seu e-mail institucional quando há novidades no chamado.</p></div></li>
+    <li><span class="num">2</span><div><h3>Você consulta o histórico quando quiser</h3><p>Em <strong>Meus chamados</strong>, no ChicoChat+, e também no portal do GLPI, em <a href="https://suporte.pedroleopoldo.mg.gov.br/">suporte.pedroleopoldo.mg.gov.br</a>.</p></div></li>
+    <li><span class="num">3</span><div><h3>Você avalia o atendimento</h3><p>Depois de abrir o chamado, o Chico pede uma nota de 1 a 5. Sua opinião nos ajuda a melhorar.</p></div></li>
+  </ol>
+
+  <div class="shot" style="padding:18px 20px 8px;">
+    <img src="capturas/meus-chamados.png" alt="Tela Meus chamados com três chamados fictícios e suas situações">
+  </div>
+  <p class="small" style="margin-top:10px;">Tela com dados fictícios.</p>
+
+  <div class="closing" style="margin-bottom:8px;">
+    <div>
+      <h2>Trabalhamos a todo vapor para responder o mais rápido possível.</h2>
+      <p>Para novos pedidos, use sempre o ChicoChat+: é o canal oficial de atendimento da TI.</p>
+    </div>
+    <a class="pill-link" href="https://chicochat.pl.mg.gov.br">Abrir o ChicoChat+</a>
+  </div>
+
+  <div class="foot"><span>Como usar o ChicoChat+</span><span>6</span></div>
+</section>
+
+</body>
+</html>
