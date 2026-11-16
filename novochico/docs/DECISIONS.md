@@ -580,3 +580,34 @@ Altera a ADR-030 no conteúdo, sem mudar o modelo de duas camadas.
   - A suíte depende do modelo, que varia entre execuções: um cenário pode falhar uma vez e passar na seguinte. Falha repetida indica problema de instrução.
   - O endereço do site de suporte ao SEI não é conhecido: o agente cita só o nome, dentro da intranet.
   - `https://sei.pedroleopoldo.mg.gov.br` não respondeu de fora da rede da Prefeitura durante a construção; o endereço foi informado pelo responsável.
+
+## ADR-046 — Contexto completo mantido; híbrida como caminho para documentação
+
+Confirma a ADR-030 e a ADR-045 com evidência experimental e define quando mudar.
+
+- **Contexto:** o agente recebe a cada mensagem as regras fixas e as instruções inteiras (~3,2 mil tokens), sem banco vetorial, RAG nem ferramentas. A escolha vinha de argumento, não de medição. Pediu-se comparar, sem favorecer nenhuma, três arquiteturas: contexto completo, RAG e híbrida (instruções inteiras, manuais recuperados por similaridade e consulta determinística ao GLPI).
+- **Estudo** (Parte II do estudo de robustez, 12 a 16/11/2026): mesmo modelo e parâmetros de produção. Foram 70 itens de teste em seis grupos (regras, documentação, conflito regra × manual, sem resposta, várias mensagens e situação de chamado) e três tamanhos de base: S0, a atual, com ~3 mil tokens; S1, com ~11 mil, incluindo três manuais públicos adaptados; S2, com ~31 mil, incluindo manuais fictícios. No total, 426 conversas. A avaliação combinou verificações automáticas, um juiz cego (outro modelo) e revisão manual de todas as divergências; a estatística, Wilson, McNemar e não inferioridade com margem de 5 pontos. Resultados:
+  - Base atual: contexto completo 31/32, RAG 31/32, híbrida 32/32. Sem diferença.
+  - Base S2: contexto completo 63/69, RAG 58/69, híbrida 62/69. Nenhuma diferença foi significativa e nenhuma não inferioridade ficou demonstrada.
+  - **RAG puro perde regras:** quando entram manuais, as regras de senha do AD, senha do e-mail, site externo e dúvida de uso do SEI ficam fora dos 4 trechos recuperados. Em "setor inteiro sem internet", ele não liberou o formulário em nenhuma das três bases.
+  - **Conflito regra × manual derruba as três:** acertos de 4/10, 2/10 e 4/10. O aviso de que as instruções prevalecem não bastou. O manual também invadiu casos que não pediam passo a passo, como desatolar a impressora ou indicar um portal de troca de senha.
+  - **Documentação:** 29/29, 28/29 e 29/29. **Dado inventado:** 2 casos reais em 426.
+  - **Situação de chamado:** só a híbrida respondeu (18/18), porque tinha a ferramenta; as outras não inventaram.
+  - **Custo por mês** (~2.640 mensagens): contexto completo US$ 2,3 na base atual e US$ 20,7 na S2; RAG ~US$ 1,7; híbrida US$ 2,8 a 3,7. A latência mediana ficou parecida, e a busca acrescenta ~0,3 s.
+- **Decisão:**
+  1. **Manter o contexto completo** para as instruções de atendimento, sem mudança no código. Com só regras, ele acerta tanto quanto as alternativas, é o mais simples e o que a equipe publica é exatamente o que o modelo lê.
+  2. **RAG puro não será usado para regras.** A recuperação por similaridade pode deixar fora a regra que deveria prevalecer.
+  3. **Se manuais forem incorporados**, usar a híbrida: instruções sempre inteiras e só os manuais pela busca. São condições obrigatórias:
+     - os manuais passam por curadoria, sem procedimentos que as instruções proíbam (instalar programa, desatolar, trocar senha por conta própria, dúvida de uso do SEI);
+     - a suíte de avaliação ganha cenários de conflito regra × manual, que precisam passar antes de publicar.
+  4. **Situação de chamado** é uma ferramenta de consulta ao GLPI, independente da escolha acima. Se for desejada, entra como consulta determinística, restrita aos chamados da própria pessoa, nunca como texto no prompt.
+- **Gatilhos para reabrir:**
+  - manuais a incorporar, ou instruções acima de ~10 mil tokens;
+  - custo mensal do modelo que passe a pesar no orçamento;
+  - troca do modelo, prevista para 2027, que exige repetir o estudo;
+  - demanda real por consulta de chamados pelo chat.
+- **Consequências e riscos:**
+  - O estudo teve uma repetição por item, por causa da cota gratuita. Detecta só diferenças grandes, e falhas raras podem não ter aparecido.
+  - A documentação de S1 e S2 é em grande parte fictícia, e os conflitos foram escolhidos pelo autor do estudo. Manuais reais podem se comportar de outro jeito.
+  - O juiz planejado (3.6 Flash) esgotou a cota gratuita; o juiz usado (3.5 Flash-Lite) é mais fraco, compensado pela revisão manual das divergências.
+  - O banco continua relacional (PostgreSQL). Adotar a híbrida exigiria índice vetorial (pgvector ou equivalente) e reindexação a cada publicação dos manuais.
