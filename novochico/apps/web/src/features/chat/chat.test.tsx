@@ -162,7 +162,7 @@ describe('tela inicial', () => {
     expect(screen.queryByRole('link', { name: /ouvidoria/i })).toBeNull();
     const shortcuts = screen.getByRole('region', { name: 'Atalhos' });
     expect(shortcuts.querySelectorAll('li').length).toBe(2);
-    expect(screen.getByRole('link', { name: /sou usuário avançado/i }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: /abrir chamado no glpi/i }).getAttribute('href')).toBe(
       PORTAL,
     );
     expect(screen.getByText(/pode cometer erros/i)).toBeTruthy();

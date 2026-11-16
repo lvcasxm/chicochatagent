@@ -48,7 +48,7 @@ WhatsApp, embed em outros sites, CPF e RAG não existem no legado e não devem s
 | `/agent/:slug` | Redireciona para `/` | Compatibilidade |
 
 ### Tela inicial `[LEGADO]`
-Mostra logotipo vertical, "Como posso te ajudar hoje?", apresentação "Sou o assistente de IA da Prefeitura Municipal de Pedro Leopoldo, especializado em TI. Descreva seu problema ou escolha um dos atalhos abaixo.", composer em destaque, cards de categoria (Anexo C), "Meus chamados" e "Sou usuário avançado". Rodapé do composer: "O ChicoChat+ pode cometer erros. Verifique informações importantes."
+Mostra logotipo vertical, "Como posso te ajudar hoje?", apresentação "Sou o assistente de IA da Prefeitura Municipal de Pedro Leopoldo, especializado em TI. Descreva seu problema ou escolha um dos atalhos abaixo.", composer em destaque, cards de categoria (Anexo C), "Meus chamados". No rodapé da tela de chat, à esquerda da marca PL Digital: "Já sabe o que precisa? Abrir chamado no GLPI", com link para o portal. Rodapé do composer: "O ChicoChat+ pode cometer erros. Verifique informações importantes."
 
 ### Eventos de analytics
 `conversation_started`, `category_detected`, `resolved_without_ticket`, `ticket_created`, `ticket_failed`, `conversation_finished`, `rating_received`, `ticket_duplicate_warning_shown`, `ticket_duplicate_overridden`. `[LEGADO]` nos nomes, salvo `ticket_failed` `[PROPOSTA]`; todos gerados no servidor `[CORREÇÃO]`.
@@ -88,7 +88,7 @@ Mostra logotipo vertical, "Como posso te ajudar hoje?", apresentação "Sou o as
 - **RF-026** Em alta demanda (503): "Alta demanda no momento. Aguarde alguns segundos e tente novamente — você não perdeu a conversa." `[LEGADO]`
 - **RF-027** Em limite ou queda da IA: mensagem e link para o portal GLPI. `[LEGADO]`
 - **RF-028** Permitir repetir o envio sem perder a conversa quando a IA falhar. `[PROPOSTA]`
-- **RF-029** Exibir link "Sou usuário avançado" para o portal na tela inicial. `[LEGADO]`
+- **RF-029** Exibir no rodapé da tela de chat o link "Já sabe o que precisa? Abrir chamado no GLPI" para o portal. `[LEGADO]`
 
 ### Chamado
 - **RF-030** Exibir formulário em diálogo quando liberado. `[LEGADO]`

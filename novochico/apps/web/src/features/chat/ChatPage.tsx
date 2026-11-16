@@ -97,7 +97,6 @@ export function ChatPage() {
     content = (
       <HomeScreen
         cards={cards}
-        glpiPortalUrl={portal}
         composer={composer}
         disabled={busy}
         onPickCard={(card) => {
@@ -171,6 +170,17 @@ export function ChatPage() {
 
   return (
     <AppShell
+      footerNote={
+        portal && (
+          <>
+            Já sabe o que precisa?{' '}
+            <a href={portal} target="_blank" rel="noopener noreferrer">
+              Abrir chamado no GLPI
+              <span className="sr-only"> (abre em nova aba)</span>
+            </a>
+          </>
+        )
+      }
       actions={
         <Button
           variant="ghost"
