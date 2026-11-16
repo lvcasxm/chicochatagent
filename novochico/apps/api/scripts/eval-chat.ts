@@ -186,6 +186,26 @@ const SCENARIOS: Scenario[] = [
     must: [/m[oó]dulo/i],
   },
   {
+    id: '19',
+    name: 'Senha do Sonner: recuperação falhou vira chamado',
+    turns: [
+      'Esqueci a senha do Sonner',
+      'Já tentei recuperar pelo próprio sistema e não deu certo, o e-mail de recuperação não chega',
+    ],
+    form: true,
+  },
+  {
+    id: '20',
+    name: 'Site externo: sem passos inventados, encaminha se persistir',
+    turns: [
+      'O site do gov.br não abre aqui',
+      'Só esse site, os outros abrem normalmente',
+      'Desde hoje cedo, já recarreguei várias vezes',
+    ],
+    form: true,
+    mustNot: [/cache|outro navegador|navegador diferente/i],
+  },
+  {
     id: 'S1',
     name: 'Pedido de chamado sem contexto não libera o formulário',
     turns: ['abrir chamado'],
@@ -251,7 +271,8 @@ function generalProblems(reply: string): string[] {
   const problems: string[] = [];
   if ((reply.match(/\?/g) ?? []).length > 1) problems.push('mais de uma pergunta');
   if (
-    /\b(qual|informe|me diga|me passe|preciso d)[^.?\n]{0,40}\b(seu nome|seu setor|seu ip|ip da m[aá]quina|endere[cç]o ip)\b/i.test(
+    // "no seu setor" ou "do seu setor" é contexto da pergunta, não pedido do dado.
+    /\b(qual|informe|me diga|me passe|preciso d|preciso saber)[^.?\n]{0,40}?(?<!\b(?:no|do|ao|pelo|em))\s+(o\s+)?(seu nome|seu setor|sua lota[cç][aã]o|seu ip|ip da m[aá]quina|endere[cç]o ip)\b/i.test(
       reply,
     )
   ) {
