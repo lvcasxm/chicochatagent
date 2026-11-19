@@ -12,6 +12,7 @@ import { createApp } from '../../app';
 import {
   auditLog,
   conversations,
+  messageImages,
   messages,
   ticketAttempts,
   ticketTranscripts,
@@ -435,6 +436,44 @@ describe.skipIf(!TEST_DATABASE_URL)('Meus chamados e transcrição', () => {
   });
 
   describe('transcrição: acesso', () => {
+    it('a imagem anexada aparece na transcrição para quem pode lê-la, e só ela', async () => {
+      const owner = await actor();
+      const tecnico = await actor('tecnico');
+      const stranger = await actor();
+      const conversationId = await conversationOf(owner);
+      const [userMessage] = await orm()
+        .select({ id: messages.id })
+        .from(messages)
+        .where(eq(messages.role, 'user'));
+      const image = Buffer.from('imagem-webp');
+      await orm()
+        .insert(messageImages)
+        .values({ messageId: userMessage!.id, mimeType: 'image/webp', data: image });
+      expect((await open(owner, conversationId)).statusCode).toBe(201);
+      const token = /\/conversa\/([A-Za-z0-9_-]{43})/.exec(
+        glpiFake.tickets.at(-1)?.content ?? '',
+      )?.[1];
+
+      const body = transcriptResponseSchema.parse((await transcript(owner, token!)).json());
+      expect(body.messages.map((m) => m.imageMessageId)).toEqual([userMessage!.id, undefined]);
+
+      const imageOf = (who: Actor, messageId: string) =>
+        app.inject({
+          method: 'GET',
+          url: `/api/transcripts/${token}/images/${messageId}`,
+          headers: headers(who),
+        });
+      for (const who of [owner, tecnico]) {
+        const response = await imageOf(who, userMessage!.id);
+        expect(response.statusCode).toBe(200);
+        expect(response.headers['content-type']).toBe('image/webp');
+        expect(response.rawPayload.equals(image)).toBe(true);
+      }
+      expect((await imageOf(stranger, userMessage!.id)).statusCode).toBe(404);
+      expect((await imageOf(owner, '00000000-0000-4000-8000-000000000000')).statusCode).toBe(404);
+      expect((await imageOf(owner, 'nao-e-uuid')).statusCode).toBe(404);
+    });
+
     it('o dono lê, com o rótulo de cada fala e o resumo do chamado', async () => {
       const who = await actor();
       const { token, ticketId } = await openAndGetToken(who);

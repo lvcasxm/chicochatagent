@@ -1,10 +1,14 @@
-import { and, asc, desc, eq, isNotNull, isNull, lt, sql } from 'drizzle-orm';
-import type { DbExecutor } from '../../db/client';
-import { conversations, feedbacks, messages } from '../../db/schema';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, sql } from 'drizzle-orm';
+import type { DbExecutor, OrmClient } from '../../db/client';
+import { conversations, feedbacks, messageImages, messages } from '../../db/schema';
 
 export type ConversationRow = typeof conversations.$inferSelect;
 export type MessageRow = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
+export interface ImageData {
+  mimeType: string;
+  data: Buffer;
+}
 
 /** Campos que o servidor atualiza ao longo da conversa. */
 export type ConversationPatch = Partial<
@@ -26,7 +30,7 @@ export type ConversationPatch = Partial<
 >;
 
 /** SQL do módulo `conversations`. Só o `service.ts` do módulo deve usá-lo. */
-export function createConversationsRepository(db: DbExecutor) {
+export function createConversationsRepository(db: DbExecutor & Pick<OrmClient, 'transaction'>) {
   return {
     async insert(values: { userId: string; categoryKey: string | null }): Promise<ConversationRow> {
       const [row] = await db.insert(conversations).values(values).returning();
@@ -80,10 +84,51 @@ export function createConversationsRepository(db: DbExecutor) {
       return row?.attempts ?? 0;
     },
 
-    async insertMessage(values: NewMessage): Promise<MessageRow> {
-      const [row] = await db.insert(messages).values(values).returning();
-      if (!row) throw new Error('Falha ao gravar a mensagem');
-      return row;
+    /** Grava a mensagem e, se houver, a imagem dela, na mesma transação: uma não fica sem a outra. */
+    async insertMessage(values: NewMessage, image?: ImageData): Promise<MessageRow> {
+      return db.transaction(async (tx) => {
+        const [row] = await tx.insert(messages).values(values).returning();
+        if (!row) throw new Error('Falha ao gravar a mensagem');
+        if (image) await tx.insert(messageImages).values({ ...image, messageId: row.id });
+        return row;
+      });
+    },
+
+    /** Mensagens da conversa que têm imagem (só os identificadores, sem carregar as imagens). */
+    async imageMessageIds(conversationId: string): Promise<Set<string>> {
+      const rows = await db
+        .select({ messageId: messageImages.messageId })
+        .from(messageImages)
+        .innerJoin(messages, eq(messages.id, messageImages.messageId))
+        .where(eq(messages.conversationId, conversationId));
+      return new Set(rows.map((row) => row.messageId));
+    },
+
+    /** As imagens destas mensagens, por identificador da mensagem. */
+    async imagesFor(messageIds: string[]): Promise<Map<string, ImageData>> {
+      if (messageIds.length === 0) return new Map();
+      const rows = await db
+        .select({
+          messageId: messageImages.messageId,
+          mimeType: messageImages.mimeType,
+          data: messageImages.data,
+        })
+        .from(messageImages)
+        .where(inArray(messageImages.messageId, messageIds));
+      return new Map(rows.map(({ messageId, ...image }) => [messageId, image]));
+    },
+
+    /** A imagem da mensagem, só se a mensagem for desta conversa. */
+    async findImage(conversationId: string, messageId: string): Promise<ImageData | null> {
+      const [row] = await db
+        .select({ mimeType: messageImages.mimeType, data: messageImages.data })
+        .from(messageImages)
+        .innerJoin(messages, eq(messages.id, messageImages.messageId))
+        .where(
+          and(eq(messageImages.messageId, messageId), eq(messages.conversationId, conversationId)),
+        )
+        .limit(1);
+      return row ?? null;
     },
 
     async listMessages(conversationId: string): Promise<MessageRow[]> {

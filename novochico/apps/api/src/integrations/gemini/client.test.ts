@@ -76,6 +76,26 @@ describe('createGeminiClient', () => {
     expect(JSON.stringify(request.contents)).not.toContain('REGRAS');
   });
 
+  it('envia a imagem anexada antes do texto da mesma mensagem', async () => {
+    const { sdk, requests } = sdkWith([{ text: 'Vi o erro' }]);
+    const client = createGeminiClient({ apiKey: 'chave-de-teste', model: 'modelo-x', sdk });
+    const image = { mimeType: 'image/webp', data: Buffer.from('imagem') };
+    await collect(
+      client.streamChat({
+        system: 's',
+        messages: [...MESSAGES, { role: 'user', content: 'Olha a tela', image }],
+        signal: new AbortController().signal,
+      }),
+    );
+
+    const { contents } = requests[0] as { contents: Array<{ parts: unknown[] }> };
+    expect(contents[0]?.parts).toEqual([{ text: 'Meu PC não liga' }]);
+    expect(contents[3]?.parts).toEqual([
+      { inlineData: { mimeType: 'image/webp', data: Buffer.from('imagem').toString('base64') } },
+      { text: 'Olha a tela' },
+    ]);
+  });
+
   it('usa os parâmetros do chat: temperatura 0,2, top_p 0,9 e 512 tokens', async () => {
     const { sdk, requests } = sdkWith([{ text: 'Oi' }]);
     const client = createGeminiClient({ apiKey: 'k', model: 'm', sdk });

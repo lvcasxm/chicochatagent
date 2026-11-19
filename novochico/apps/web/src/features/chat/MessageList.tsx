@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { AttachedImage } from '../../components/AttachedImage';
 import { Markdown } from '../../components/Markdown';
 import { Notice } from '../../components/Notice';
 import { cx } from '../../lib/cx';
@@ -28,7 +29,8 @@ export function MessageList({
       {messages.map((message) => {
         if (message.role === 'user') {
           return (
-            <div key={message.id} className="flex justify-end">
+            <div key={message.id} className="flex flex-col items-end gap-2">
+              {message.imageUrl && <AttachedImage src={message.imageUrl} />}
               <p className="type-body max-w-[85%] rounded-lg bg-accent px-4 py-3 break-words whitespace-pre-wrap text-accent-fg">
                 {message.content}
               </p>

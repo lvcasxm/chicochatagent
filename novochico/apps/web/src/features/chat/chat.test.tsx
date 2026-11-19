@@ -285,6 +285,7 @@ describe('conversa', () => {
         role: 'user',
         content: 'A impressora está offline',
         incomplete: false,
+        hasImage: true,
         createdAt: '2026-03-02T11:59:00.000Z',
       },
       {
@@ -292,6 +293,7 @@ describe('conversa', () => {
         role: 'assistant',
         content: 'Reinicie a **impressora**.\n\n- passo um\n- passo dois',
         incomplete: false,
+        hasImage: false,
         createdAt: '2026-03-02T11:59:30.000Z',
       },
     ],
@@ -311,6 +313,11 @@ describe('conversa', () => {
     const { container } = renderChat(`/c/${CONVERSATION_ID}`);
     expect(await screen.findByRole('heading', { name: 'Impressora offline' })).toBeTruthy();
     expect(screen.getByText('A impressora está offline')).toBeTruthy();
+    expect(
+      screen.getByRole('img', { name: 'Imagem anexada pela pessoa' }).getAttribute('src'),
+    ).toBe(
+      `/api/conversations/${CONVERSATION_ID}/messages/a1111111-1111-4111-8111-111111111111/image`,
+    );
     expect(container.querySelectorAll('ul > li')).toHaveLength(2);
     expect(screen.queryByRole('button', { name: /manutenção de impressora/i })).toBeNull(); // sem tela inicial
   });
@@ -537,5 +544,133 @@ describe('lista de conversas', () => {
     mockApi({ 'GET /api/conversations': () => json(500, {}) });
     renderChat();
     expect(await screen.findByText(/não foi possível carregar a lista/i)).toBeTruthy();
+  });
+});
+
+describe('anexo de imagem', () => {
+  const MESSAGES_URL = `POST /api/conversations/${CONVERSATION_ID}/messages`;
+  const PNG = new File([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], 'erro.png', {
+    type: 'image/png',
+  });
+  const PNG_BASE64 = 'iVBORw0KGgo=';
+  const EMPTY_DETAIL = {
+    id: CONVERSATION_ID,
+    title: 'Erro na tela',
+    categoryKey: null,
+    outcome: null,
+    lastMessageAt: '2026-03-02T12:00:00.000Z',
+    messages: [],
+    triage: {
+      resolutionAttempts: 0,
+      issuePersists: null,
+      ticketFormUnlocked: false,
+      testMode: false,
+      resolved: false,
+      feedback: 'unavailable',
+    },
+  };
+  const fileInput = (container: HTMLElement) =>
+    container.querySelector<HTMLInputElement>('input[type="file"]')!;
+
+  it('anexa pelo botão, mostra a prévia e envia a imagem com o texto', async () => {
+    const calls = mockApi({
+      [`GET /api/conversations/${CONVERSATION_ID}`]: () => json(200, EMPTY_DETAIL),
+      [MESSAGES_URL]: () => sse(turn('Vi o erro.')),
+    });
+    const { container } = renderChat(`/c/${CONVERSATION_ID}`);
+    await composer();
+    await userEvent.upload(fileInput(container), PNG);
+    expect(await screen.findByRole('img', { name: 'Imagem anexada' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Anexar imagem' }).hasAttribute('disabled')).toBe(
+      true,
+    );
+
+    await userEvent.type(await composer(), 'Aparece este erro{Enter}');
+    expect(await screen.findByText('Vi o erro.')).toBeTruthy();
+    expect(calls.find((c) => c.key === MESSAGES_URL)?.body).toEqual({
+      content: 'Aparece este erro',
+      image: PNG_BASE64,
+    });
+    // A imagem enviada aparece na conversa e sai do campo.
+    expect(screen.getByRole('img', { name: 'Imagem anexada pela pessoa' })).toBeTruthy();
+    expect(screen.queryByRole('img', { name: 'Imagem anexada' })).toBeNull();
+  });
+
+  it('aceita um print colado no campo', async () => {
+    mockApi({ [`GET /api/conversations/${CONVERSATION_ID}`]: () => json(200, EMPTY_DETAIL) });
+    renderChat(`/c/${CONVERSATION_ID}`);
+    await userEvent.click(await composer());
+    await userEvent.paste({ files: [PNG] } as unknown as DataTransfer);
+    expect(await screen.findByRole('img', { name: 'Imagem anexada' })).toBeTruthy();
+  });
+
+  it('sem texto não envia, e a imagem pode ser removida antes do envio', async () => {
+    const calls = mockApi({
+      [`GET /api/conversations/${CONVERSATION_ID}`]: () => json(200, EMPTY_DETAIL),
+    });
+    const { container } = renderChat(`/c/${CONVERSATION_ID}`);
+    await composer();
+    await userEvent.upload(fileInput(container), PNG);
+    await screen.findByRole('img', { name: 'Imagem anexada' });
+    expect(screen.getByRole('button', { name: 'Enviar mensagem' }).hasAttribute('disabled')).toBe(
+      true,
+    );
+    expect((await composer()).getAttribute('placeholder')).toBe('Conte o que aparece na imagem');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remover imagem' }));
+    expect(screen.queryByRole('img', { name: 'Imagem anexada' })).toBeNull();
+    expect(calls.some((c) => c.key === MESSAGES_URL)).toBe(false);
+  });
+
+  it.each([
+    [new File(['gif'], 'a.gif', { type: 'image/gif' }), 'Envie uma imagem PNG, JPEG ou WebP.'],
+    [
+      new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'grande.png', { type: 'image/png' }),
+      'A imagem passa de 5 MB.',
+    ],
+  ])('recusa no navegador o arquivo fora do tipo ou do tamanho (%#)', async (file, message) => {
+    mockApi({ [`GET /api/conversations/${CONVERSATION_ID}`]: () => json(200, EMPTY_DETAIL) });
+    const { container } = renderChat(`/c/${CONVERSATION_ID}`);
+    await composer();
+    await userEvent.upload(fileInput(container), file, { applyAccept: false });
+    expect((await screen.findByRole('alert')).textContent).toContain(message);
+    expect(screen.queryByRole('img', { name: 'Imagem anexada' })).toBeNull();
+  });
+
+  it('imagem recusada pelo servidor: mensagem clara, sem "Tentar novamente" e sem a mensagem na tela', async () => {
+    mockApi({
+      [`GET /api/conversations/${CONVERSATION_ID}`]: () => json(200, EMPTY_DETAIL),
+      [MESSAGES_URL]: () => json(422, { error: { code: 'IMAGE_LIMIT', message: 'limite' } }),
+    });
+    const { container } = renderChat(`/c/${CONVERSATION_ID}`);
+    await composer();
+    await userEvent.upload(fileInput(container), PNG);
+    await screen.findByRole('img', { name: 'Imagem anexada' });
+    await userEvent.type(await composer(), 'Mais uma tela{Enter}');
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('limite de imagens');
+    expect(within(alert).queryByRole('button', { name: /tentar novamente/i })).toBeNull();
+    expect(screen.queryByText('Mais uma tela')).toBeNull();
+  });
+
+  it('com 3 imagens na conversa, o botão de anexar fica desligado', async () => {
+    const withImages = {
+      ...EMPTY_DETAIL,
+      messages: [1, 2, 3].map((n) => ({
+        id: `a111111${n}-1111-4111-8111-111111111111`,
+        role: 'user',
+        content: `tela ${n}`,
+        incomplete: false,
+        hasImage: true,
+        createdAt: '2026-03-02T11:59:00.000Z',
+      })),
+    };
+    mockApi({ [`GET /api/conversations/${CONVERSATION_ID}`]: () => json(200, withImages) });
+    renderChat(`/c/${CONVERSATION_ID}`);
+    const button = await screen.findByRole('button', {
+      name: 'Limite de imagens desta conversa atingido',
+    });
+    expect(button.hasAttribute('disabled')).toBe(true);
   });
 });

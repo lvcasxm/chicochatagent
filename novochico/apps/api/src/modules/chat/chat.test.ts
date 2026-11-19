@@ -1,5 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
+import sharp from 'sharp';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   PRIVACY_NOTICE_VERSION,
@@ -16,6 +17,7 @@ import {
   analyticsEvents,
   conversations,
   instructionVersions,
+  messageImages,
   messages,
 } from '../../db/schema';
 import { seedDatabase } from '../../db/seed';
@@ -1090,6 +1092,197 @@ describe.skipIf(!TEST_DATABASE_URL)('chat: conversas e mensagens', () => {
       expect(asUser.glpiPortalUrl).toBe('https://chamados.example.test/');
       expect(asUser.canUseTestMode).toBe(false);
       expect((await fetch(admin)).canUseTestMode).toBe(true);
+    });
+  });
+
+  describe('anexo de imagem', () => {
+    /** Foto JPEG com EXIF (como a de um celular), em base64, como o navegador envia. */
+    async function photo() {
+      const data = await sharp({
+        create: { width: 120, height: 80, channels: 3, background: '#24BCEC' },
+      })
+        .jpeg()
+        .withMetadata({ exif: { IFD0: { Make: 'Celular', Model: 'Teste' } } })
+        .toBuffer();
+      return data.toString('base64');
+    }
+
+    async function sendWithImage(
+      who: Actor,
+      conversationId: string,
+      content: string,
+      image: string,
+    ) {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/conversations/${conversationId}/messages`,
+        headers: headers(who),
+        payload: { content, image },
+      });
+      return { status: response.statusCode, body: response.body };
+    }
+
+    const imageUrl = (conversationId: string, messageId: string) =>
+      `/api/conversations/${conversationId}/messages/${messageId}/image`;
+
+    async function userMessageId(conversationId: string) {
+      const [found] = await orm()
+        .select({ id: messages.id })
+        .from(messages)
+        .where(and(eq(messages.conversationId, conversationId), eq(messages.role, 'user')));
+      if (!found) throw new Error('mensagem não encontrada no teste');
+      return found.id;
+    }
+
+    it('a IA recebe a imagem com o texto, e a conversa mostra que a mensagem tem imagem', async () => {
+      const ai = useScript([['Vi o erro na tela.']]);
+      const who = await actor();
+      const id = await newConversation(who);
+      expect((await sendWithImage(who, id, 'Aparece este erro', await photo())).status).toBe(200);
+
+      const sent = ai.calls[0]?.messages.at(-1);
+      expect(sent?.content).toBe('Aparece este erro');
+      expect(sent?.image?.mimeType).toBe('image/webp');
+      expect((await sharp(sent!.image!.data).metadata()).format).toBe('webp');
+
+      const { body } = await detail(who, id);
+      const parsed = conversationDetailSchema.parse(body);
+      expect(parsed.messages.map((m) => [m.role, m.hasImage])).toEqual([
+        ['user', true],
+        ['assistant', false],
+      ]);
+    });
+
+    it('guarda só a versão reprocessada, sem os metadados do arquivo original', async () => {
+      useScript([['ok']]);
+      const who = await actor();
+      const id = await newConversation(who);
+      await sendWithImage(who, id, 'Olha a tela', await photo());
+
+      const [stored] = await orm().select().from(messageImages);
+      expect(stored?.mimeType).toBe('image/webp');
+      const meta = await sharp(stored!.data).metadata();
+      expect(meta.format).toBe('webp');
+      expect(meta.exif).toBeUndefined();
+    });
+
+    it('o dono vê a imagem; outra pessoa, mensagem errada ou sem imagem recebem 404', async () => {
+      useScript([['ok']]);
+      const owner = await actor();
+      const other = await actor();
+      const id = await newConversation(owner);
+      await sendWithImage(owner, id, 'Olha a tela', await photo());
+      const messageId = await userMessageId(id);
+
+      const mine = await app.inject({
+        method: 'GET',
+        url: imageUrl(id, messageId),
+        headers: headers(owner),
+      });
+      expect(mine.statusCode).toBe(200);
+      expect(mine.headers['content-type']).toBe('image/webp');
+      expect(mine.headers['cache-control']).toBe('no-store');
+      expect((await sharp(mine.rawPayload).metadata()).format).toBe('webp');
+
+      const assistantId = (await detail(owner, id)).body.messages as Array<{
+        id: string;
+        role: string;
+      }>;
+      for (const [who, url] of [
+        [other, imageUrl(id, messageId)],
+        [owner, imageUrl(id, '00000000-0000-4000-8000-000000000000')],
+        [owner, imageUrl(id, assistantId.find((m) => m.role === 'assistant')!.id)],
+        [owner, imageUrl(id, 'nao-e-uuid')],
+      ] as const) {
+        const response = await app.inject({ method: 'GET', url, headers: headers(who) });
+        expect(response.statusCode, url).toBe(404);
+      }
+    });
+
+    it('arquivo que não é imagem aceita: 422, sem gravar a mensagem nem chamar a IA', async () => {
+      const ai = useScript([['x']]);
+      const who = await actor();
+      const id = await newConversation(who);
+      const gif = await sharp({
+        create: { width: 10, height: 10, channels: 3, background: '#000' },
+      })
+        .gif()
+        .toBuffer();
+      for (const image of [
+        Buffer.from('não é imagem').toString('base64'),
+        gif.toString('base64'),
+      ]) {
+        const result = await sendWithImage(who, id, 'Olha a tela', image);
+        expect(result.status).toBe(422);
+        expect(JSON.parse(result.body)).toMatchObject({ error: { code: 'INVALID_IMAGE' } });
+      }
+      expect(ai.calls).toHaveLength(0);
+      expect(
+        await orm().select().from(messages).where(eq(messages.conversationId, id)),
+      ).toHaveLength(0);
+    });
+
+    it('até 3 imagens por conversa; a quarta é recusada antes de gravar', async () => {
+      useScript([['ok'], ['ok'], ['ok'], ['ok']]);
+      const who = await actor();
+      const id = await newConversation(who);
+      for (const n of [1, 2, 3]) {
+        expect((await sendWithImage(who, id, `imagem ${n}`, await photo())).status).toBe(200);
+      }
+      const fourth = await sendWithImage(who, id, 'imagem 4', await photo());
+      expect(fourth.status).toBe(422);
+      expect(JSON.parse(fourth.body)).toMatchObject({ error: { code: 'IMAGE_LIMIT' } });
+      expect(await orm().select().from(messageImages)).toHaveLength(3);
+      const contents = (await orm().select().from(messages)).map((m) => m.content);
+      expect(contents).not.toContain('imagem 4');
+
+      // Sem imagem, a conversa continua normalmente.
+      expect((await send(who, id, 'sem imagem agora')).status).toBe(200);
+    });
+
+    it('a imagem não dispensa o texto, e arquivo acima de 5 MB é recusado', async () => {
+      const ai = useScript([['x']]);
+      const who = await actor();
+      const id = await newConversation(who);
+      expect((await sendWithImage(who, id, '', await photo())).status).toBe(422);
+      const tooBig = Buffer.alloc(5 * 1024 * 1024 + 3).toString('base64');
+      expect((await sendWithImage(who, id, 'grande', tooBig)).status).toBe(422);
+      expect(ai.calls).toHaveLength(0);
+    });
+
+    it('o limite maior de tamanho vale só para o envio de mensagem', async () => {
+      const who = await actor();
+      const id = await newConversation(who);
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/conversations/${id}/tickets`,
+        headers: headers(who),
+        payload: { sector: 'x'.repeat(100 * 1024) },
+      });
+      expect(response.statusCode).toBe(413);
+    });
+
+    it('primeira mensagem com imagem não usa nem alimenta o cache de respostas', async () => {
+      const QUESTION = 'Olá! Estou com problemas na impressora do meu setor. Pode me ajudar?';
+      const ai = useScript([['Resposta sobre a imagem.'], ['Resposta sobre a imagem.']]);
+      const a = await actor();
+      const b = await actor();
+      const first = await sendWithImage(a, await newConversation(a), QUESTION, await photo());
+      expect(first.status).toBe(200);
+      expect(await orm().select().from(aiResponseCache)).toHaveLength(0);
+      await send(b, await newConversation(b), QUESTION);
+      expect(ai.calls).toHaveLength(2);
+    });
+
+    it('repetir o envio depois de uma falha reaproveita a mensagem e a imagem já gravadas', async () => {
+      const ai = useScript([new LlmError('unavailable'), ['Agora vi.']]);
+      const who = await actor();
+      const id = await newConversation(who);
+      const image = await photo();
+      expect((await sendWithImage(who, id, 'Olha a tela', image)).status).toBe(503);
+      expect((await sendWithImage(who, id, 'Olha a tela', image)).status).toBe(200);
+      expect(await orm().select().from(messageImages)).toHaveLength(1);
+      expect(ai.calls[1]?.messages.at(-1)?.image?.mimeType).toBe('image/webp');
     });
   });
 

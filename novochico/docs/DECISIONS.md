@@ -580,3 +580,23 @@ Altera a ADR-030 no conteúdo, sem mudar o modelo de duas camadas.
   - A suíte depende do modelo, que varia entre execuções: um cenário pode falhar uma vez e passar na seguinte. Falha repetida indica problema de instrução.
   - O endereço do site de suporte ao SEI não é conhecido: o agente cita só o nome, dentro da intranet.
   - `https://sei.pedroleopoldo.mg.gov.br` não respondeu de fora da rede da Prefeitura durante a construção; o endereço foi informado pelo responsável.
+
+## ADR-047 — Imagem anexada no chat
+
+O número ADR-046 fica reservado à decisão de arquitetura (contexto completo, RAG ou híbrida), registrada em branch própria.
+
+- **Contexto:** muita gente descreve mal um erro que está na tela; um print explica mais rápido. O Gemini aceita imagem na mesma chamada do texto, e o SDK já monta a mensagem em partes.
+- **Decisão:**
+  1. **Uma imagem por mensagem, até 3 por conversa** (`IMAGES_PER_CONVERSATION_MAX`). Cada imagem volta à IA a cada mensagem seguinte, então o limite segura o custo. O texto continua obrigatório.
+  2. **PNG, JPEG ou WebP, até 5 MB,** conferidos no navegador e de novo no servidor, pelo conteúdo do arquivo.
+  3. **O servidor regrava a imagem com o `sharp`** (única dependência nova): confere que é imagem de verdade, aplica a rotação, reduz o lado maior para 1600 px e grava em WebP. A regravação descarta o EXIF (localização e aparelho). Só essa versão é guardada.
+  4. **No PostgreSQL**, na tabela `message_images` (uma por mensagem, apagada junto com a mensagem). Entra no backup que já existe, sem volume nem serviço novo.
+  5. **Envio em base64 no JSON da própria mensagem,** sem `multipart`. O limite de 64 KB do corpo continua para toda a API; só o envio de mensagem aceita até ~7 MB.
+  6. **Acesso:** a imagem sai por `GET /api/conversations/:id/messages/:messageId/image`, só para o dono, e por `GET /api/transcripts/:token/images/:messageId`, para quem pode ler a transcrição. Fora disso, 404. Resposta com `no-store`, como o resto da API.
+  7. **Chamado:** o técnico vê a imagem na transcrição, pelo link que já vai no chamado. A imagem não é anexada ao GLPI por enquanto: a API da instância ainda não foi conferida para envio de arquivo (`PEND-05`).
+  8. **Cache de respostas:** conversa com imagem não usa nem alimenta o cache, porque a resposta depende da imagem.
+- **Consequências e riscos:**
+  - A imagem vai ao Google junto com o texto. Print de tela pode mostrar dados pessoais; isso agrava a `PEND-07` (envio ao Google e retenção).
+  - O resumo do chamado continua só com o texto da conversa.
+  - O painel do administrador ainda não mostra a imagem na leitura da conversa.
+

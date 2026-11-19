@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import {
+  IMAGE_MAX_BYTES,
   createConversationRequestSchema,
   sendMessageRequestSchema,
   type ConversationDetail,
@@ -15,6 +16,13 @@ import type { ConversationsService } from '../conversations';
 import type { ChatService } from './service';
 
 const idParamSchema = z.object({ id: z.uuid() });
+const imageParamSchema = z.object({ id: z.uuid(), messageId: z.uuid() });
+
+/**
+ * O envio de mensagem é a única rota que recebe imagem: o limite maior vale só aqui. Comporta a
+ * imagem em base64 (um terço maior que o arquivo) mais o texto e o JSON em volta.
+ */
+const MESSAGE_BODY_LIMIT = Math.ceil(IMAGE_MAX_BYTES / 3) * 4 + 64 * 1024;
 
 /** Identificador malformado e conversa de outro usuário recebem a mesma resposta: 404. */
 function conversationId(params: unknown): string {
@@ -52,6 +60,15 @@ export function registerChatRoutes(
     return deps.conversations.detail(conversationId(request.params), user.id);
   });
 
+  /** Imagem anexada a uma mensagem. Só o dono da conversa a vê; qualquer outro caso é 404. */
+  app.get('/api/conversations/:id/messages/:messageId/image', guarded, async (request, reply) => {
+    const { user } = requireAuth(request);
+    const parsed = imageParamSchema.safeParse(request.params);
+    if (!parsed.success) throw new AppError('IMAGE_NOT_FOUND', 404, 'Imagem não encontrada.');
+    const image = await deps.conversations.image(parsed.data.id, parsed.data.messageId, user.id);
+    return reply.header('content-type', image.mimeType).send(image.data);
+  });
+
   app.delete('/api/conversations/:id', guarded, async (request, reply) => {
     const { user } = requireAuth(request);
     await deps.conversations.remove(conversationId(request.params), user.id);
@@ -64,7 +81,7 @@ export function registerChatRoutes(
    */
   app.post(
     '/api/conversations/:id/messages',
-    { ...guarded, preHandler: deps.limits.guard('messages') },
+    { ...guarded, bodyLimit: MESSAGE_BODY_LIMIT, preHandler: deps.limits.guard('messages') },
     async (request, reply) => {
       const { user } = requireAuth(request);
       const id = conversationId(request.params);
@@ -80,6 +97,7 @@ export function registerChatRoutes(
         actor: { id: user.id, role: user.role },
         conversationId: id,
         text: input.content,
+        ...(input.image ? { image: Buffer.from(input.image, 'base64') } : {}),
         signal: abort.signal,
       });
 

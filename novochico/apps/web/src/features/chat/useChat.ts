@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatEvent, TriageState } from '@chicochat/shared';
 import { ApiError } from '../../lib/api';
-import { createConversation, fetchConversation, sendMessage } from '../../lib/chat-api';
+import {
+  createConversation,
+  fetchConversation,
+  messageImageUrl,
+  sendMessage,
+} from '../../lib/chat-api';
 import { CHAT_ERRORS, describeSendError, type ChatFailure } from './chat-messages';
 
 export interface UiMessage {
@@ -9,6 +14,8 @@ export interface UiMessage {
   role: 'user' | 'assistant' | 'notice';
   content: string;
   incomplete: boolean;
+  /** Imagem anexada: endereço no servidor ou, logo depois do envio, a `data:` URL local. */
+  imageUrl?: string;
 }
 
 export type ChatStatus = 'loading' | 'ready' | 'sending' | 'streaming' | 'not_found' | 'load_error';
@@ -31,7 +38,7 @@ export interface UseChatOptions {
 
 /**
  * Estado de uma conversa na tela: histórico vindo do servidor, envio com resposta em stream e
- * erros. O cliente só envia texto; o servidor decide papéis, triagem e liberação do chamado.
+ * erros. O cliente só envia o texto e a imagem; o servidor decide papéis, triagem e chamado.
  */
 export function useChat(conversationId: string | null, options: UseChatOptions) {
   const [messages, setMessages] = useState<UiMessage[]>([]);
@@ -39,7 +46,8 @@ export function useChat(conversationId: string | null, options: UseChatOptions) 
   const [title, setTitle] = useState<string | null>(null);
   const [status, setStatus] = useState<ChatStatus>(conversationId ? 'loading' : 'ready');
   const [failure, setFailure] = useState<ChatFailure | null>(null);
-  const [lastText, setLastText] = useState<string | null>(null);
+  /** O último envio, para repetir depois de uma falha (RF-028). */
+  const [lastSent, setLastSent] = useState<{ text: string; image?: string } | null>(null);
 
   const idRef = useRef(conversationId);
   // Conversa criada nesta tela: já está na tela, não precisa ser buscada ao a rota apontar para ela.
@@ -60,7 +68,7 @@ export function useChat(conversationId: string | null, options: UseChatOptions) 
       setMessages([]);
       setTriage(EMPTY_TRIAGE);
       setTitle(null);
-      setLastText(null);
+      setLastSent(null);
       setCreatedHere(null);
       setStatus('ready');
     } else if (createdHere !== conversationId) {
@@ -82,6 +90,7 @@ export function useChat(conversationId: string | null, options: UseChatOptions) 
             role: m.role,
             content: m.content,
             incomplete: m.incomplete,
+            ...(m.hasImage ? { imageUrl: messageImageUrl(conversationId, m.id) } : {}),
           })),
         );
         setTriage(detail.triage);
@@ -140,12 +149,12 @@ export function useChat(conversationId: string | null, options: UseChatOptions) 
   }, []);
 
   const send = useCallback(
-    async (text: string, categoryKey?: string): Promise<void> => {
+    async (text: string, categoryKey?: string, image?: string): Promise<void> => {
       const content = text.trim();
       if (content === '') return;
 
       setFailure(null);
-      setLastText(content);
+      setLastSent({ text: content, ...(image ? { image } : {}) });
       setStatus('sending');
       const controller = new AbortController();
       abortRef.current = controller;
@@ -154,7 +163,7 @@ export function useChat(conversationId: string | null, options: UseChatOptions) 
       const assistantLocalId = `local-assistant-${crypto.randomUUID()}`;
       setMessages((current) => [
         ...current,
-        { id: userLocalId, role: 'user', content, incomplete: false },
+        { id: userLocalId, role: 'user', content, incomplete: false, imageUrl: image },
         { id: assistantLocalId, role: 'assistant', content: '', incomplete: false },
       ]);
 
@@ -167,14 +176,17 @@ export function useChat(conversationId: string | null, options: UseChatOptions) 
           setCreatedHere(id);
           optionsRef.current.onCreated(id);
         }
-        for await (const event of sendMessage(id, content, controller.signal)) {
+        for await (const event of sendMessage(id, content, controller.signal, image)) {
           applyEvent(event, assistantLocalId);
         }
       } catch (error) {
         if (controller.signal.aborted) return;
-        // Sem resposta: tira o balão vazio da IA. A mensagem da pessoa fica, e dá para repetir.
-        setMessages((current) => current.filter((m) => m.id !== assistantLocalId));
-        setFailure(describeSendError(error));
+        // Sem resposta: tira o balão vazio da IA. A mensagem da pessoa fica, e dá para repetir,
+        // a não ser que a imagem tenha sido recusada: aí nada foi gravado e ela sai também.
+        const failed = describeSendError(error);
+        const drop = failed.rejected ? [assistantLocalId, userLocalId] : [assistantLocalId];
+        setMessages((current) => current.filter((m) => !drop.includes(m.id)));
+        setFailure(failed);
       } finally {
         if (!controller.signal.aborted) {
           setMessages((current) =>
@@ -190,14 +202,14 @@ export function useChat(conversationId: string | null, options: UseChatOptions) 
 
   /** Repete o último envio (RF-028). O servidor reaproveita a mensagem já gravada. */
   const retry = useCallback(() => {
-    if (lastText === null) return Promise.resolve();
+    if (lastSent === null) return Promise.resolve();
     // Remove da tela a cópia local da última mensagem; o envio a coloca de novo.
     setMessages((current) => {
-      const index = current.findLastIndex((m) => m.role === 'user' && m.content === lastText);
+      const index = current.findLastIndex((m) => m.role === 'user' && m.content === lastSent.text);
       return index >= 0 ? current.filter((_, i) => i !== index) : current;
     });
-    return send(lastText);
-  }, [lastText, send]);
+    return send(lastSent.text, undefined, lastSent.image);
+  }, [lastSent, send]);
 
   /** Registra na tela um aviso do sistema (ex.: chamado aberto), igual ao que o servidor gravou. */
   const appendNotice = useCallback((content: string) => {

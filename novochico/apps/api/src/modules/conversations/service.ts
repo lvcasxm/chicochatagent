@@ -10,6 +10,7 @@ import type {
   ConversationPatch,
   ConversationRow,
   ConversationsRepository,
+  ImageData,
   MessageRow,
 } from './repository';
 
@@ -19,11 +20,20 @@ const HISTORY_MESSAGE_MAX_LENGTH = 2000;
 const LIST_LIMIT = 100;
 const TRANSCRIPT_LIMIT = 60;
 
-export type { ConversationRow, MessageRow };
+export type { ConversationRow, ImageData, MessageRow };
 
+/** Mensagem que vai à IA, com a imagem anexada, se houver. */
 export interface HistoryMessage {
   role: 'user' | 'assistant';
   content: string;
+  image?: ImageData;
+}
+
+/** Linha da transcrição do chamado: a imagem fica de fora, só a referência à mensagem que a tem. */
+export interface TranscriptLine {
+  role: 'user' | 'assistant';
+  content: string;
+  imageMessageId?: string;
 }
 
 function toSummary(row: ConversationRow): ConversationSummary {
@@ -36,14 +46,20 @@ function toSummary(row: ConversationRow): ConversationSummary {
   };
 }
 
-function toMessage(row: MessageRow): ChatMessage {
+function toMessage(row: MessageRow, hasImage: boolean): ChatMessage {
   return {
     id: row.id,
     role: row.role,
     content: row.content,
     incomplete: row.incomplete,
+    hasImage,
     createdAt: row.createdAt.toISOString(),
   };
+}
+
+/** Só `user` e `assistant` completas: o que a IA e a transcrição enxergam. */
+function isDialogue(row: MessageRow): row is MessageRow & { role: 'user' | 'assistant' } {
+  return (row.role === 'user' || row.role === 'assistant') && !row.incomplete;
 }
 
 /** A avaliação só se abre depois de um chamado aberto ou de uma resolução confirmada (RF-060). */
@@ -106,9 +122,10 @@ export function createConversationsService(deps: {
     async detail(id: string, userId: string): Promise<ConversationDetail> {
       const row = await requireOwned(id, userId);
       const rows = await repository.listMessages(id);
+      const withImage = await repository.imageMessageIds(id);
       return {
         ...toSummary(row),
-        messages: rows.map(toMessage),
+        messages: rows.map((message) => toMessage(message, withImage.has(message.id))),
         triage: toTriageState(row, await repository.hasFeedback(id)),
       };
     },
@@ -121,27 +138,45 @@ export function createConversationsService(deps: {
 
     /** Mensagens que a IA enxerga: só `user` e `assistant` completas, as 16 últimas, cada uma limitada. */
     async history(id: string): Promise<HistoryMessage[]> {
-      const rows = await repository.lastMessages(id, HISTORY_LIMIT * 2);
-      return rows
-        .filter(
-          (row): row is MessageRow & { role: 'user' | 'assistant' } =>
-            (row.role === 'user' || row.role === 'assistant') && !row.incomplete,
-        )
-        .slice(-HISTORY_LIMIT)
-        .map((row) => ({ role: row.role, content: clip(row.content, HISTORY_MESSAGE_MAX_LENGTH) }));
+      const rows = (await repository.lastMessages(id, HISTORY_LIMIT * 2))
+        .filter(isDialogue)
+        .slice(-HISTORY_LIMIT);
+      const images = await repository.imagesFor(
+        rows.filter((row) => row.role === 'user').map((row) => row.id),
+      );
+      return rows.map((row) => {
+        const image = images.get(row.id);
+        return {
+          role: row.role,
+          content: clip(row.content, HISTORY_MESSAGE_MAX_LENGTH),
+          ...(image ? { image } : {}),
+        };
+      });
     },
 
     /** A conversa para o resumo do chamado: user e assistant completas, as 60 últimas, cada uma limitada. */
-    async transcript(id: string): Promise<HistoryMessage[]> {
-      const rows = await repository.lastMessages(id, TRANSCRIPT_LIMIT * 2);
-      return rows
-        .filter(
-          (row): row is MessageRow & { role: 'user' | 'assistant' } =>
-            (row.role === 'user' || row.role === 'assistant') && !row.incomplete,
-        )
-        .slice(-TRANSCRIPT_LIMIT)
-        .map((row) => ({ role: row.role, content: clip(row.content, HISTORY_MESSAGE_MAX_LENGTH) }));
+    async transcript(id: string): Promise<TranscriptLine[]> {
+      const rows = (await repository.lastMessages(id, TRANSCRIPT_LIMIT * 2))
+        .filter(isDialogue)
+        .slice(-TRANSCRIPT_LIMIT);
+      const withImage = await repository.imageMessageIds(id);
+      return rows.map((row) => ({
+        role: row.role,
+        content: clip(row.content, HISTORY_MESSAGE_MAX_LENGTH),
+        ...(withImage.has(row.id) ? { imageMessageId: row.id } : {}),
+      }));
     },
+
+    /** A imagem de uma mensagem, para o dono da conversa. Qualquer outro caso é o mesmo 404. */
+    async image(id: string, messageId: string, userId: string): Promise<ImageData> {
+      await requireOwned(id, userId);
+      const image = await repository.findImage(id, messageId);
+      if (!image) throw new AppError('IMAGE_NOT_FOUND', 404, 'Imagem não encontrada.');
+      return image;
+    },
+
+    /** Quantas imagens a conversa já tem, para o limite por conversa. */
+    countImages: async (id: string) => (await repository.imageMessageIds(id)).size,
 
     /**
      * Fecha as conversas sem atividade há 30 minutos (RF-064): marca o fim da sessão de
@@ -175,8 +210,10 @@ export function createConversationsService(deps: {
 
     countMessages: (id: string) => repository.countMessages(id),
 
-    addMessage: (values: Parameters<ConversationsRepository['insertMessage']>[0]) =>
-      repository.insertMessage(values),
+    addMessage: (
+      values: Parameters<ConversationsRepository['insertMessage']>[0],
+      image?: ImageData,
+    ) => repository.insertMessage(values, image),
 
     update: (id: string, patch: ConversationPatch) => repository.update(id, patch, now()),
 

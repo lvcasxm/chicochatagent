@@ -17,3 +17,8 @@ export async function fetchTranscript(token: string): Promise<TranscriptResponse
   if (!response.ok) throw new ApiError(response.status);
   return transcriptResponseSchema.parse(await response.json());
 }
+
+/** Endereço da imagem anexada a uma mensagem da transcrição (mesmas regras de acesso dela). */
+export function transcriptImageUrl(token: string, messageId: string): string {
+  return `/api/transcripts/${encodeURIComponent(token)}/images/${encodeURIComponent(messageId)}`;
+}

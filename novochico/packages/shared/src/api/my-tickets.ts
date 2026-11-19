@@ -56,6 +56,8 @@ export const transcriptResponseSchema = z.object({
       role: z.enum(['user', 'assistant']),
       content: z.string(),
       at: z.iso.datetime(),
+      /** Mensagem com imagem: servida em `/api/transcripts/:token/images/:imageMessageId`. */
+      imageMessageId: z.uuid().optional(),
     }),
   ),
 });

@@ -1,5 +1,14 @@
 import { sql } from 'drizzle-orm';
-import { boolean, check, index, integer, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  check,
+  customType,
+  index,
+  integer,
+  pgTable,
+  text,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { CONVERSATION_TITLE_MAX_LENGTH, MESSAGE_MAX_LENGTH } from '@chicochat/shared';
 import { conversationOutcome, messageRole, messageSource } from './enums';
 import { createdAt, lit, pk, tstz, updatedAt } from './helpers';
@@ -76,3 +85,20 @@ export const messages = pgTable(
     check('messages_user_has_no_source', sql`${t.role} <> 'user' or ${t.source} is null`),
   ],
 );
+
+const bytea = customType<{ data: Buffer }>({ dataType: () => 'bytea' });
+
+/**
+ * Imagem anexada a uma mensagem do usuário (no máximo uma por mensagem). Guarda só a versão já
+ * reprocessada pelo servidor, sem os metadados do arquivo original.
+ */
+export const messageImages = pgTable('message_images', {
+  id: pk(),
+  messageId: uuid('message_id')
+    .notNull()
+    .unique()
+    .references(() => messages.id, { onDelete: 'cascade' }),
+  mimeType: text('mime_type').notNull(),
+  data: bytea('data').notNull(),
+  createdAt: createdAt(),
+});

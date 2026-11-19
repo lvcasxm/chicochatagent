@@ -15,6 +15,13 @@
       "when": 1793982383709,
       "tag": "0001_conversa_modo_teste",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795099259263,
+      "tag": "0002_anexo_imagem",
+      "breakpoints": true
     }
   ]
 }

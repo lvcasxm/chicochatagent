@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import type { TranscriptResponse } from '@chicochat/shared';
 import { AppShell } from '../../app/layouts/AppShell';
+import { AttachedImage } from '../../components/AttachedImage';
 import { ButtonLink } from '../../components/Button';
 import { ErrorState } from '../../components/ErrorState';
 import { Skeleton } from '../../components/Skeleton';
 import { ApiError } from '../../lib/api';
-import { fetchTranscript } from '../../lib/my-tickets-api';
+import { fetchTranscript, transcriptImageUrl } from '../../lib/my-tickets-api';
 import { formatDateTime } from '../../lib/time';
 
 /** Quem fala em cada mensagem (RF-058): a pessoa é "Servidor", sem nome. */
@@ -134,6 +135,11 @@ export function TranscriptPage() {
                     {formatDateTime(message.at)}
                   </span>
                 </p>
+                {message.imageMessageId && (
+                  <div className="flex py-1">
+                    <AttachedImage src={transcriptImageUrl(token, message.imageMessageId)} />
+                  </div>
+                )}
                 <p className="type-body break-words whitespace-pre-wrap">{message.content}</p>
               </li>
             ))}

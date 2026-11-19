@@ -1,12 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import {
   ATTENDANCE_SESSION_TIMEOUT_MINUTES,
+  IMAGES_PER_CONVERSATION_MAX,
   type ChatEvent,
   type ConversationSummary,
   type UserRole,
 } from '@chicochat/shared';
 import { LlmError, type LlmChunk, type LlmClient } from '../../integrations/gemini/llm';
 import { AppError } from '../../lib/errors';
+import { prepareImage } from '../../lib/image';
 import type { Logger } from '../../lib/logger';
 import type { AnalyticsService } from '../analytics';
 import type { ChatCategory, ContentService } from '../content';
@@ -46,6 +48,8 @@ export const MESSAGES = {
   interrupted: 'A resposta foi interrompida. Você pode tentar de novo.',
   turnInProgress: 'Aguarde a resposta anterior terminar.',
   testShortcut: 'Modo de teste: o formulário de chamado foi liberado para você, administrador.',
+  invalidImage: 'Não foi possível ler a imagem. Envie um arquivo PNG, JPEG ou WebP.',
+  imageLimit: `Esta conversa já tem ${IMAGES_PER_CONVERSATION_MAX} imagens, o máximo permitido. Descreva o restante em texto ou comece uma nova conversa.`,
 } as const;
 
 /** Respostas do cache saem em blocos curtos, como um stream de verdade. */
@@ -177,6 +181,8 @@ export function createChatService(deps: ChatServiceDeps) {
       actor: ChatActor;
       conversationId: string;
       text: string;
+      /** Arquivo de imagem anexado, como chegou do cliente. */
+      image?: Buffer;
       signal: AbortSignal;
     }): Promise<Turn> {
       const { actor, conversationId, text, signal } = input;
@@ -204,7 +210,8 @@ export function createChatService(deps: ChatServiceDeps) {
         // Repetir o envio depois de uma falha (RF-028): a mensagem já gravada, sem resposta, é reaproveitada.
         const isRetry = previous?.role === 'user' && previous.content === text;
         if (!isRetry) {
-          await conversations.addMessage({ conversationId, role: 'user', content: text });
+          const image = input.image ? await acceptImage(input.image) : undefined;
+          await conversations.addMessage({ conversationId, role: 'user', content: text }, image);
         }
 
         // Sessão de atendimento: 30 minutos sem atividade abrem uma nova (RN-32).
@@ -246,7 +253,9 @@ export function createChatService(deps: ChatServiceDeps) {
         const prompt = buildSystemPrompt({ instructions: instructions.content, isAdmin });
         const history = await conversations.history(conversationId);
 
-        const cacheable = isCacheableQuestion({ text, isFirstMessage, isAdmin });
+        // A resposta a uma imagem depende dela: não sai do cache nem vai para ele.
+        const hasImage = history.some((message) => message.image !== undefined);
+        const cacheable = !hasImage && isCacheableQuestion({ text, isFirstMessage, isAdmin });
         const cachedAnswer = cacheable ? await cache.lookup(prompt.version, text) : null;
 
         let source: AsyncIterator<LlmChunk>;
@@ -283,6 +292,16 @@ export function createChatService(deps: ChatServiceDeps) {
       } catch (error) {
         dispose();
         throw error;
+      }
+
+      /** Confere o limite por conversa e prepara a imagem; recusa antes de gravar qualquer coisa. */
+      async function acceptImage(file: Buffer) {
+        if ((await conversations.countImages(conversationId)) >= IMAGES_PER_CONVERSATION_MAX) {
+          throw new AppError('IMAGE_LIMIT', 422, MESSAGES.imageLimit);
+        }
+        const image = await prepareImage(file);
+        if (!image) throw new AppError('INVALID_IMAGE', 422, MESSAGES.invalidImage);
+        return image;
       }
 
       async function openTestShortcut(): Promise<Turn> {

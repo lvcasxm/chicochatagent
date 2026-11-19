@@ -59,6 +59,11 @@ export class SendError extends Error {
   }
 }
 
+/** Endereço da imagem anexada a uma mensagem da conversa (só o dono a recebe). */
+export function messageImageUrl(conversationId: string, messageId: string): string {
+  return `/api/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}/image`;
+}
+
 /**
  * Envia a mensagem e entrega os eventos da resposta, um a um. Erros anteriores ao stream viram
  * `SendError`; os posteriores chegam como evento `error`.
@@ -67,10 +72,12 @@ export async function* sendMessage(
   conversationId: string,
   content: string,
   signal: AbortSignal,
+  /** Imagem anexada, como `data:` URL (o servidor recebe só o base64). */
+  image?: string,
 ): AsyncGenerator<ChatEvent, void, undefined> {
   const response = await call(`/api/conversations/${encodeURIComponent(conversationId)}/messages`, {
     method: 'POST',
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content, ...(image ? { image: image.split(',')[1] } : {}) }),
     headers: { accept: 'text/event-stream' },
     signal,
   });
