@@ -21,17 +21,12 @@ const EXTERNAL = { target: '_blank', rel: 'noopener noreferrer' } as const;
 export function HomeScreen({ cards, composer, disabled, onPickCard }: HomeScreenProps) {
   return (
     <div className="flex flex-col gap-10">
-      <div className="flex flex-col items-start gap-6">
-        <div className="flex flex-col gap-3">
-          <h1 className="type-title-2">Como posso te ajudar hoje?</h1>
-          <p className="type-lead text-fg-muted">
-            Sou o assistente de IA da Prefeitura Municipal de Pedro Leopoldo, especializado em TI.
-            Descreva o seu problema ou escolha um atalho.
-          </p>
-        </div>
+      <div className="flex flex-col gap-6">
+        <h1 className="type-title-1 text-balance sm:text-[3rem] sm:leading-[3.5rem]">
+          Como posso te ajudar hoje?
+        </h1>
+        {composer}
       </div>
-
-      {composer}
 
       {cards.length > 0 && (
         <section aria-labelledby="atalhos" className="flex flex-col gap-3">
