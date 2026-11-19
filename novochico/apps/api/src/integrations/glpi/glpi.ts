@@ -75,4 +75,13 @@ export interface GlpiClient {
   createTicket(input: GlpiTicketInput): Promise<{ ticketId: string }>;
   /** Liga o solicitante ao chamado. Falhar aqui não desfaz o chamado. */
   attachRequester(ticketId: string, requesterId: number): Promise<void>;
+  /** Anexa um arquivo ao chamado, como documento. Falhar aqui não desfaz o chamado. */
+  attachFile(ticketId: string, file: GlpiFile): Promise<void>;
+}
+
+export interface GlpiFile {
+  /** Nome com extensão: o GLPI confere o tipo pela extensão. */
+  name: string;
+  mimeType: string;
+  data: Buffer;
 }

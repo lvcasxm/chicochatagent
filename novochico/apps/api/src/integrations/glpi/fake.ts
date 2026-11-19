@@ -1,4 +1,10 @@
-import { GlpiError, type GlpiClient, type GlpiTicket, type GlpiTicketInput } from './glpi';
+import {
+  GlpiError,
+  type GlpiClient,
+  type GlpiFile,
+  type GlpiTicket,
+  type GlpiTicketInput,
+} from './glpi';
 
 /**
  * GLPI de mentira, sem rede. Serve aos testes e ao desenvolvimento (`GLPI_PROVIDER=fake`): guarda
@@ -14,6 +20,8 @@ export interface FakeGlpiOptions {
   /** `'missing'`: ninguém é encontrado. `'error'`: a busca falha. Padrão: todos têm cadastro. */
   requester?: 'found' | 'missing' | 'error';
   attachFails?: boolean;
+  /** Falha ao anexar arquivo ao chamado. */
+  fileFails?: boolean;
   /** Espera antes de criar (para testar chamadas simultâneas). */
   createDelayMs?: number;
   /** Falha na leitura dos chamados (listagem e consulta individual). */
@@ -46,6 +54,7 @@ export function createFakeGlpi(options: FakeGlpiOptions = {}) {
   const tickets: FakeGlpiTicket[] = [];
   const lookups: string[] = [];
   const attached: Array<{ ticketId: string; requesterId: number }> = [];
+  const files: Array<{ ticketId: string } & GlpiFile> = [];
   const reads: string[] = [];
   let creates = 0;
   const now = () => new Date().toISOString();
@@ -94,6 +103,12 @@ export function createFakeGlpi(options: FakeGlpiOptions = {}) {
       return Promise.resolve();
     },
 
+    attachFile(ticketId, file) {
+      if (options.fileFails) return Promise.reject(new GlpiError('GLPI_SERVER'));
+      files.push({ ticketId, ...file });
+      return Promise.resolve();
+    },
+
     listTickets(requesterId) {
       reads.push(`list:${requesterId}`);
       if (options.readFails) return Promise.reject(options.readFails);
@@ -115,7 +130,7 @@ export function createFakeGlpi(options: FakeGlpiOptions = {}) {
     },
   };
 
-  return { client, tickets, lookups, attached, reads, creates: () => creates, userIds };
+  return { client, tickets, lookups, attached, files, reads, creates: () => creates, userIds };
 }
 
 /** GLPI de desenvolvimento: sempre abre o chamado, com números a partir de 1000. */

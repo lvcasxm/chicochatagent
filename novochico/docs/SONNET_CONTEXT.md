@@ -452,6 +452,8 @@ Sucesso em 200/201. ID em `id`, `ID` ou `ticket_id`; sem ID, é erro. Título li
 
 **Anexar solicitante** `[LEGADO]`: `POST /api.php/Assistance/Ticket/{id}/TeamMember` com `{"type":"User","id":<id>,"role":"requester"}`. Falha é aviso em log e não desfaz o chamado.
 
+**Anexar imagens** `[ADR-048]`: com `GLPI_ATTACH_IMAGES=true`, depois de criar o chamado, cada imagem da conversa vai como documento PNG (`chicochat-imagem-N.png`) pela API legada, a única que recebe arquivo: `GET {GLPI_LEGACY_API_PATH}/initSession` com `Authorization: Basic` (mesmo usuário de serviço) e `App-Token` se configurado; `POST /Document` em `multipart/form-data`, com `uploadManifest` = `{"input":{"name":…,"itemtype":"Ticket","items_id":<id>}}` e o arquivo em `filename[0]`; `GET /killSession` no fim, mesmo com falha. Falha é aviso em log e não desfaz o chamado.
+
 ### G.5 Resumo por IA `[LEGADO]`
 - Entrada: mensagens `user`/`assistant` do banco, setor e categoria travada.
 - Saída validada: `titulo` (≤ 80), `descricao` com seis seções, `categoria`, `urgencia` (1-5, inválido vira 3).
@@ -684,6 +686,7 @@ Toda leitura de ambiente em `apps/api/src/config`, validada por zod na partida. 
 | `GLPI_PROVIDER` | Não | `glpi` | `glpi` ou `fake` (só desenvolvimento; recusado em produção) |
 | `GLPI_URL`, `GLPI_CLIENT_ID`, `GLPI_CLIENT_SECRET`, `GLPI_USERNAME`, `GLPI_PASSWORD` | Para o GLPI, juntas | Ver G.1 | Sem elas a abertura fica indisponível (ADR-037) |
 | `GLPI_TOKEN_PATH`, `GLPI_REQUEST_TYPE_ID`, `GLPI_TIMEOUT_MS` | Não | `/api.php/token`, 10, 15000 | Ver G.1 |
+| `GLPI_ATTACH_IMAGES`, `GLPI_LEGACY_API_PATH`, `GLPI_APP_TOKEN` | Não | `false`, `/api.php/v1`, vazio | Ver G.4 e ADR-048 |
 | `GEMINI_SUMMARY_MODEL` | Não | `gemini-3.1-flash-lite` | Modelo do resumo do chamado |
 | `GLPI_PORTAL_URL` | Sim | — | Legado: `https://suporte.pedroleopoldo.mg.gov.br/` |
 | `TICKET_IP_REGEX` | Não | `^\d{2}\.\d\.\d\.\d{2,3}$` | `PEND-13` |

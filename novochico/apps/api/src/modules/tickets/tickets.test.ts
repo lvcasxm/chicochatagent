@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
+import sharp from 'sharp';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   PRIVACY_NOTICE_VERSION,
@@ -9,7 +10,14 @@ import {
   type UserRole,
 } from '@chicochat/shared';
 import { createApp } from '../../app';
-import { analyticsEvents, conversations, messages, ticketAttempts, users } from '../../db/schema';
+import {
+  analyticsEvents,
+  conversations,
+  messageImages,
+  messages,
+  ticketAttempts,
+  users,
+} from '../../db/schema';
 import { seedDatabase } from '../../db/seed';
 import { createScriptedLlm } from '../../integrations/gemini/fake';
 import { LlmError, type LlmClient } from '../../integrations/gemini/llm';
@@ -56,6 +64,7 @@ describe.skipIf(!TEST_DATABASE_URL)('chamados: abertura no GLPI', () => {
     attachRequester: (id, requester) => (glpiOn ?? glpiFake.client).attachRequester(id, requester),
     listTickets: (id) => (glpiOn ?? glpiFake.client).listTickets(id),
     getTicket: (id) => (glpiOn ?? glpiFake.client).getTicket(id),
+    attachFile: (id, file) => (glpiOn ?? glpiFake.client).attachFile(id, file),
   };
 
   let summary: ReturnType<typeof createScriptedLlm> = createScriptedLlm([], []);
@@ -402,7 +411,10 @@ describe.skipIf(!TEST_DATABASE_URL)('chamados: abertura no GLPI', () => {
       expect(ticket?.content).toContain('**IP da máquina:** 10.1.2.30');
       expect(ticket?.content).toContain('**Categoria:** Outra coisa?');
       expect(ticket?.content).toContain(
-        SECTIONS.replace('Contexto:\n', 'Contexto:\nSolicitante: Maria Silva Santos. Setor: Secretaria de Saúde. IP da máquina: 10.1.2.30.\n'),
+        SECTIONS.replace(
+          'Contexto:\n',
+          'Contexto:\nSolicitante: Maria Silva Santos. Setor: Secretaria de Saúde. IP da máquina: 10.1.2.30.\n',
+        ),
       );
       expect(ticket?.content).not.toContain('RESPOSTA-DO-BOT');
       expect(glpiFake.attached).toEqual([{ ticketId: '1000', requesterId: 7 }]);
@@ -467,6 +479,89 @@ describe.skipIf(!TEST_DATABASE_URL)('chamados: abertura no GLPI', () => {
       const other = await actor();
       expect((await open(other, await conversationOf(other))).status).toBe(201);
       expect(glpiFake.tickets).toHaveLength(1);
+    });
+  });
+
+  describe('imagens no chamado', () => {
+    /** Conversa liberada com uma imagem (já em WebP, como o chat guarda) na fala da pessoa. */
+    async function conversationWithImage(who: Actor) {
+      const conversationId = await conversationOf(who);
+      const [userMessage] = await orm()
+        .select({ id: messages.id })
+        .from(messages)
+        .where(eq(messages.conversationId, conversationId));
+      const data = await sharp({
+        create: { width: 80, height: 40, channels: 3, background: '#24BCEC' },
+      })
+        .webp()
+        .toBuffer();
+      await orm()
+        .insert(messageImages)
+        .values({ messageId: userMessage!.id, mimeType: 'image/webp', data });
+      return conversationId;
+    }
+
+    it('anexa as imagens da conversa ao chamado criado, em PNG', async () => {
+      const who = await actor();
+      const { status, body } = await open(who, await conversationWithImage(who));
+      expect(status).toBe(201);
+      expect(glpiFake.files).toHaveLength(1);
+      const [file] = glpiFake.files;
+      expect(file).toMatchObject({
+        ticketId: body.ticketId,
+        name: 'chicochat-imagem-1.png',
+        mimeType: 'image/png',
+      });
+      expect(await sharp(file!.data).metadata()).toMatchObject({
+        format: 'png',
+        width: 80,
+        height: 40,
+      });
+    });
+
+    it('conversa sem imagem não envia nada', async () => {
+      const who = await actor();
+      expect((await open(who, await conversationOf(who))).status).toBe(201);
+      expect(glpiFake.files).toHaveLength(0);
+    });
+
+    it('falha ao anexar não desfaz o chamado: só um aviso no log, sem conteúdo', async () => {
+      setGlpi({ fileFails: true });
+      const who = await actor();
+      const { status, body } = await open(who, await conversationWithImage(who));
+      expect(status).toBe(201);
+      expect(body).toMatchObject({ status: 'success' });
+      expect((await attempts())[0]?.status).toBe('success');
+      expect(log.output()).toContain('Falha ao anexar imagem ao chamado');
+      expect(log.output()).not.toContain('A internet caiu');
+    });
+
+    it('com GLPI_ATTACH_IMAGES desligado, a imagem fica só na transcrição', async () => {
+      const off = await createApp({
+        config: { ...testConfig, glpiAttachImages: false },
+        logger: log.logger,
+        db: test.db,
+        oidc: null,
+        llm: createScriptedLlm([]).client,
+        summaryLlm: summaryProxy,
+        glpi: glpiProxy,
+        now: clock.now,
+      });
+      try {
+        await off.ready();
+        const who = await actor();
+        const response = await off.inject({
+          method: 'POST',
+          url: `/api/conversations/${await conversationWithImage(who)}/tickets`,
+          headers: headers(who, { 'idempotency-key': newKey() }),
+          payload: BODY,
+        });
+        expect(response.statusCode).toBe(201);
+        expect(glpiFake.tickets).toHaveLength(1);
+        expect(glpiFake.files).toHaveLength(0);
+      } finally {
+        await off.close();
+      }
     });
   });
 

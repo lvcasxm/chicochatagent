@@ -175,6 +175,9 @@ export function createConversationsService(deps: {
       return image;
     },
 
+    /** As imagens destas mensagens, por identificador da mensagem. */
+    images: (messageIds: string[]) => repository.imagesFor(messageIds),
+
     /** Quantas imagens a conversa já tem, para o limite por conversa. */
     countImages: async (id: string) => (await repository.imageMessageIds(id)).size,
 

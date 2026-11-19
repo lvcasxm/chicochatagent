@@ -1,5 +1,11 @@
 import type { GlpiConfig } from '../../config';
-import { GlpiError, type GlpiClient, type GlpiTicket, type GlpiTicketInput } from './glpi';
+import {
+  GlpiError,
+  type GlpiClient,
+  type GlpiFile,
+  type GlpiTicket,
+  type GlpiTicketInput,
+} from './glpi';
 
 export interface GlpiHttpOptions {
   config: GlpiConfig;
@@ -295,5 +301,82 @@ export function createGlpiClient(options: GlpiHttpOptions): GlpiClient {
       }
       if (!response.ok) throw new GlpiError('GLPI_SERVER', { httpStatus: response.status });
     },
+
+    /**
+     * A API nova do GLPI não recebe arquivo: o envio usa a API legada (ADR-048), numa sessão
+     * aberta só para isso, com o mesmo usuário de serviço. O documento é criado já ligado ao
+     * chamado (`itemtype` e `items_id`), e a sessão é encerrada no fim, mesmo com falha.
+     */
+    async attachFile(ticketId: string, file: GlpiFile) {
+      const sessionToken = await openLegacySession();
+      try {
+        const form = new FormData();
+        form.set(
+          'uploadManifest',
+          JSON.stringify({
+            input: { name: file.name, itemtype: 'Ticket', items_id: Number(ticketId) },
+          }),
+        );
+        form.set(
+          'filename[0]',
+          new Blob([new Uint8Array(file.data)], { type: file.mimeType }),
+          file.name,
+        );
+        const response = await legacyRequest('POST', '/Document', {
+          headers: { 'Session-Token': sessionToken },
+          body: form,
+        });
+        if (response.status !== 200 && response.status !== 201) {
+          throw new GlpiError(response.status >= 500 ? 'GLPI_SERVER' : 'GLPI_REJECTED', {
+            httpStatus: response.status,
+          });
+        }
+      } finally {
+        await legacyRequest('GET', '/killSession', {
+          headers: { 'Session-Token': sessionToken },
+        }).catch(() => undefined);
+      }
+    },
   };
+
+  /** Chamada à API legada. Erros de rede viram `GlpiError`; o status fica para quem chama. */
+  async function legacyRequest(
+    method: 'GET' | 'POST',
+    path: string,
+    init: { headers: Record<string, string>; body?: FormData },
+  ): Promise<Response> {
+    try {
+      return await doFetch(`${config.url}${config.legacyApiPath}${path}`, {
+        method,
+        headers: {
+          accept: 'application/json',
+          ...(config.appToken ? { 'App-Token': config.appToken } : {}),
+          ...init.headers,
+        },
+        ...(init.body ? { body: init.body } : {}),
+        signal: AbortSignal.timeout(config.timeoutMs),
+      });
+    } catch (error) {
+      throw new GlpiError(isTimeout(error) ? 'GLPI_TIMEOUT' : 'GLPI_UNAVAILABLE', {
+        cause: error,
+      });
+    }
+  }
+
+  /** Abre a sessão na API legada com usuário e senha (login por credenciais). */
+  async function openLegacySession(): Promise<string> {
+    const basic = Buffer.from(`${config.username}:${config.password}`).toString('base64');
+    const response = await legacyRequest('GET', '/initSession', {
+      headers: { authorization: `Basic ${basic}` },
+    });
+    if (response.status === 400 || response.status === 401 || response.status === 403) {
+      throw new GlpiError('GLPI_AUTH', { httpStatus: response.status });
+    }
+    if (!response.ok) throw new GlpiError('GLPI_SERVER', { httpStatus: response.status });
+    const body = (await response.json().catch(() => null)) as { session_token?: unknown } | null;
+    if (typeof body?.session_token !== 'string' || body.session_token === '') {
+      throw new GlpiError('GLPI_BAD_RESPONSE', { httpStatus: response.status });
+    }
+    return body.session_token;
+  }
 }
