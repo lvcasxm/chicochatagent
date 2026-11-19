@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { z } from 'zod';
 import type { TranscriptResponse } from '@chicochat/shared';
 import { requireAuth } from '../../http/auth';
 import { AppError } from '../../lib/errors';
@@ -6,6 +7,7 @@ import type { TranscriptsService } from './index';
 
 /** Token de 256 bits em base64url: 43 caracteres. Fora desse formato, é o mesmo 404 de inexistente. */
 const TOKEN_FORMAT = /^[A-Za-z0-9_-]{43}$/;
+const MESSAGE_ID = z.uuid();
 
 export function registerTranscriptRoutes(
   app: FastifyInstance,
@@ -23,6 +25,25 @@ export function registerTranscriptRoutes(
         throw new AppError('TRANSCRIPT_NOT_FOUND', 404, 'Conversa não encontrada.');
       }
       return deps.transcripts.view({ token, viewer: { id: user.id, role: user.role } });
+    },
+  );
+
+  // Imagem anexada a uma mensagem da transcrição, com as mesmas regras de acesso da transcrição.
+  app.get(
+    '/api/transcripts/:token/images/:messageId',
+    { config: { requiresPrivacyAck: true } },
+    async (request, reply) => {
+      const { user } = requireAuth(request);
+      const { token, messageId } = request.params as { token: string; messageId: string };
+      if (!TOKEN_FORMAT.test(token) || !MESSAGE_ID.safeParse(messageId).success) {
+        throw new AppError('TRANSCRIPT_NOT_FOUND', 404, 'Conversa não encontrada.');
+      }
+      const image = await deps.transcripts.image({
+        token,
+        messageId,
+        viewer: { id: user.id, role: user.role },
+      });
+      return reply.header('content-type', image.mimeType).send(image.data);
     },
   );
 }

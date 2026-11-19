@@ -89,6 +89,7 @@ Mostra logotipo vertical, "Como posso te ajudar hoje?" em destaque logo acima do
 - **RF-027** Em limite ou queda da IA: mensagem e link para o portal GLPI. `[LEGADO]`
 - **RF-028** Permitir repetir o envio sem perder a conversa quando a IA falhar. `[PROPOSTA]`
 - **RF-029** Exibir no rodapé da tela de chat o link "Já sabe o que precisa? Abrir chamado no GLPI" para o portal. `[LEGADO]`
+- **RF-092** Anexar uma imagem à mensagem (botão ou print colado): PNG, JPEG ou WebP até 5 MB, até 3 por conversa, com o texto obrigatório. A IA recebe a imagem; a conversa e a transcrição a exibem. Ver ADR-047.
 
 ### Chamado
 - **RF-030** Exibir formulário em diálogo quando liberado. `[LEGADO]`
@@ -510,7 +511,7 @@ interface LlmClient {
 `[PROPOSTA]` Implementação via `@google/genai`. Papel `assistant` vira `model`; `systemInstruction` recebe o prompt. O filtro de `<think>` não é portado. Modelo: `GEMINI_CHAT_MODEL`, `GEMINI_SUMMARY_MODEL`, `GEMINI_INSIGHTS_MODEL`, todos por ambiente. Padrão `gemini-3.1-flash-lite` nos dois primeiros `[LEGADO]`; a Análise IA usava `gemini-2.5-flash` pelo gateway, desativado pelo Google para novos usuários; o padrão agora é `gemini-3.1-flash-lite` (ADR-044).
 
 ### H.2 Parâmetros do chat `[LEGADO]`
-Temperatura 0,2; top_p 0,9; `maxOutputTokens` 512. Histórico: 16 últimas mensagens, cada uma limitada a 2000 caracteres com reticências. **Só** `user` e `assistant` do banco. `notice` não entra.
+Temperatura 0,2; top_p 0,9; `maxOutputTokens` 512. Histórico: 16 últimas mensagens, cada uma limitada a 2000 caracteres com reticências. **Só** `user` e `assistant` do banco. `notice` não entra. A imagem anexada a uma mensagem da pessoa vai junto dela, antes do texto (ADR-047).
 
 ### H.3 Montagem do prompt `[LEGADO]`
 `[PROPOSTA: ADR-030]`

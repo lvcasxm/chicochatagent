@@ -22,6 +22,7 @@ const EXPECTED_TABLES = [
   'conversations',
   'feedbacks',
   'instruction_versions',
+  'message_images',
   'messages',
   'sessions',
   'ticket_attempts',
@@ -55,8 +56,8 @@ describe.skipIf(!TEST_DATABASE_URL)('migrations em banco limpo', () => {
     const result = await test.db.orm.execute<{ total: string }>(
       sql`select count(*)::text as total from drizzle.__drizzle_migrations`,
     );
-    // Uma linha por migration existente (0000 e 0001).
-    expect(result.rows[0]?.total).toBe('2');
+    // Uma linha por migration existente (0000 a 0002).
+    expect(result.rows[0]?.total).toBe('3');
   });
 
   it('criam os enums com exatamente os valores de @chicochat/shared', async () => {

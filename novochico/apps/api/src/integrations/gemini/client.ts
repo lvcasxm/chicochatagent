@@ -77,7 +77,19 @@ export function createGeminiClient(options: GeminiClientOptions): LlmClient {
           model: options.model,
           contents: messages.map((message) => ({
             role: message.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: message.content }],
+            parts: [
+              ...(message.image
+                ? [
+                    {
+                      inlineData: {
+                        mimeType: message.image.mimeType,
+                        data: message.image.data.toString('base64'),
+                      },
+                    },
+                  ]
+                : []),
+              { text: message.content },
+            ],
           })),
           config: {
             systemInstruction: system,

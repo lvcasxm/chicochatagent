@@ -8,6 +8,8 @@ export interface LlmMessage {
   /** Só `user` e `assistant` chegam ao modelo; mensagens `notice` do sistema ficam de fora. */
   role: 'user' | 'assistant';
   content: string;
+  /** Imagem anexada pela pessoa, enviada ao modelo junto com o texto. */
+  image?: { mimeType: string; data: Buffer };
 }
 
 export type LlmChunk =

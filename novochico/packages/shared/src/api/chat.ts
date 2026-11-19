@@ -9,9 +9,25 @@ export const createConversationRequestSchema = z.object({
 });
 export type CreateConversationRequest = z.infer<typeof createConversationRequestSchema>;
 
-/** O cliente só envia o texto: papéis, histórico e permissões vêm do banco (ADR-011). */
+/** Tamanho máximo do arquivo de imagem anexado, antes de o servidor reprocessá-lo. */
+export const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+/** Formatos de imagem aceitos no anexo. O servidor confere o conteúdo, não só o tipo declarado. */
+export const IMAGE_ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
+
+/** Imagens por conversa: cada uma volta à IA a cada mensagem, então o limite segura o custo. */
+export const IMAGES_PER_CONVERSATION_MAX = 3;
+
+/**
+ * O cliente só envia o texto e, se houver, uma imagem em base64: papéis, histórico e permissões
+ * vêm do banco (ADR-011). O texto continua obrigatório: a imagem complementa a descrição.
+ */
 export const sendMessageRequestSchema = z.object({
   content: z.string().trim().min(1).max(USER_MESSAGE_MAX_LENGTH),
+  image: z
+    .base64()
+    .max(Math.ceil(IMAGE_MAX_BYTES / 3) * 4)
+    .optional(),
 });
 export type SendMessageRequest = z.infer<typeof sendMessageRequestSchema>;
 
@@ -35,6 +51,8 @@ export const chatMessageSchema = z.object({
   content: z.string(),
   /** Resposta que parou no meio (a conexão caiu ou a IA falhou). */
   incomplete: z.boolean(),
+  /** A mensagem tem imagem anexada, servida em `/api/conversations/:id/messages/:messageId/image`. */
+  hasImage: z.boolean(),
   createdAt: z.iso.datetime(),
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;

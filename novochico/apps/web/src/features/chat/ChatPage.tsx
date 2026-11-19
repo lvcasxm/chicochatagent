@@ -1,6 +1,7 @@
 import { LogOut, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { IMAGES_PER_CONVERSATION_MAX } from '@chicochat/shared';
 import { useAuth } from '../../app/auth/AuthContext';
 import { AppShell } from '../../app/layouts/AppShell';
 import { TruncatedText } from '../../components/TruncatedText';
@@ -53,12 +54,14 @@ export function ChatPage() {
     }
   }
 
+  const imagesSent = chat.messages.filter((message) => message.imageUrl).length;
   const composer = (
     <Composer
       cards={cards}
       disabled={busy}
       autoFocus
-      onSend={(text, key) => void chat.send(text, key)}
+      canAttachImage={imagesSent < IMAGES_PER_CONVERSATION_MAX}
+      onSend={(text, key, image) => void chat.send(text, key, image)}
     />
   );
 
@@ -114,9 +117,11 @@ export function ChatPage() {
           <Notice tone="danger">
             <p>{chat.failure.message}</p>
             <div className="mt-3 flex flex-wrap items-center gap-4">
-              <Button variant="outline" onClick={() => void chat.retry()} disabled={busy}>
-                Tentar novamente
-              </Button>
+              {!chat.failure.rejected && (
+                <Button variant="outline" onClick={() => void chat.retry()} disabled={busy}>
+                  Tentar novamente
+                </Button>
+              )}
               {chat.failure.offerPortal && portal && (
                 <a href={portal} target="_blank" rel="noopener noreferrer">
                   Abrir o portal de chamados
