@@ -21,6 +21,7 @@ export const testConfig: Config = {
   chatCacheEnabled: true,
   glpiPortalUrl: 'https://chamados.example.test/',
   glpi: { provider: 'fake' },
+  glpiAttachImages: true,
   ticketIpRegex: DEFAULT_IP_PATTERN,
 };
 

@@ -62,6 +62,7 @@ describe.skipIf(!TEST_DATABASE_URL)('Meus chamados e transcrição', () => {
     attachRequester: (id, r) => glpiFake.client.attachRequester(id, r),
     listTickets: (id) => glpiFake.client.listTickets(id),
     getTicket: (id) => glpiFake.client.getTicket(id),
+    attachFile: (id, f) => glpiFake.client.attachFile(id, f),
   };
   let summary = createScriptedLlm([], [LLM_SUMMARY]);
   const summaryProxy: LlmClient = {

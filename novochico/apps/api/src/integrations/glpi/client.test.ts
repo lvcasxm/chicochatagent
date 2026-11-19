@@ -11,6 +11,7 @@ interface Recorded {
   url: string;
   headers: IncomingMessage['headers'];
   body: string;
+  raw: Buffer;
 }
 
 type Handler = (req: Recorded, res: ServerResponse) => void;
@@ -38,6 +39,8 @@ describe('cliente HTTP do GLPI (contra um servidor falso)', () => {
     password: 'senha-fake',
     requestTypeId: 10,
     timeoutMs: 3000,
+    legacyApiPath: '/api.php/v1',
+    appToken: null,
     ...overrides,
   });
   const client = (overrides: Partial<GlpiConfig> = {}) =>
@@ -58,6 +61,7 @@ describe('cliente HTTP do GLPI (contra um servidor falso)', () => {
           url: req.url ?? '',
           headers: req.headers,
           body: Buffer.concat(chunks).toString(),
+          raw: Buffer.concat(chunks),
         };
         requests.push(recorded);
         if (recorded.url === '/api.php/token') {
@@ -408,6 +412,137 @@ describe('cliente HTTP do GLPI (contra um servidor falso)', () => {
   });
 });
 
+describe('cliente HTTP do GLPI: anexo pela API legada', () => {
+  let server: Server;
+  let baseUrl: string;
+  const requests: Recorded[] = [];
+  let documentStatus = 201;
+  let sessionStatus = 200;
+
+  beforeEach(async () => {
+    requests.length = 0;
+    documentStatus = 201;
+    sessionStatus = 200;
+    server = createServer((req, res) => {
+      const chunks: Buffer[] = [];
+      req.on('data', (c: Buffer) => chunks.push(c));
+      req.on('end', () => {
+        const raw = Buffer.concat(chunks);
+        const recorded = {
+          method: req.method ?? '',
+          url: req.url ?? '',
+          headers: req.headers,
+          body: raw.toString(),
+          raw,
+        };
+        requests.push(recorded);
+        if (recorded.url === '/api.php/v1/initSession') {
+          return json(res, sessionStatus, { session_token: 'sessao-123' });
+        }
+        if (recorded.url === '/api.php/v1/Document') return json(res, documentStatus, { id: 9 });
+        if (recorded.url === '/api.php/v1/killSession') return json(res, 200, {});
+        return json(res, 404, {});
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  });
+
+  afterEach(async () => {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  });
+
+  const client = (overrides: Partial<GlpiConfig> = {}) =>
+    createGlpiClient({
+      config: {
+        url: baseUrl,
+        tokenPath: '/api.php/token',
+        clientId: 'client-fake',
+        clientSecret: 'segredo-fake',
+        username: 'servico',
+        password: 'senha-fake',
+        requestTypeId: 10,
+        timeoutMs: 3000,
+        legacyApiPath: '/api.php/v1',
+        appToken: null,
+        ...overrides,
+      },
+    });
+  const FILE = { name: 'chicochat-imagem-1.png', mimeType: 'image/png', data: Buffer.from('png!') };
+  const byUrl = (url: string) => requests.find((r) => r.url === url);
+
+  it('abre a sessão com usuário e senha, envia o documento ligado ao chamado e encerra a sessão', async () => {
+    await client().attachFile('321', FILE);
+
+    expect(requests.map((r) => `${r.method} ${r.url}`)).toEqual([
+      'GET /api.php/v1/initSession',
+      'POST /api.php/v1/Document',
+      'GET /api.php/v1/killSession',
+    ]);
+    expect(byUrl('/api.php/v1/initSession')?.headers.authorization).toBe(
+      `Basic ${Buffer.from('servico:senha-fake').toString('base64')}`,
+    );
+    expect(byUrl('/api.php/v1/initSession')?.headers['app-token']).toBeUndefined();
+
+    const upload = byUrl('/api.php/v1/Document');
+    expect(upload?.headers['session-token']).toBe('sessao-123');
+    expect(upload?.headers['content-type']).toMatch(/^multipart\/form-data; boundary=/);
+    const form = await new Response(upload!.raw, {
+      headers: { 'content-type': upload!.headers['content-type']! },
+    }).formData();
+    expect(JSON.parse(form.get('uploadManifest') as string)).toEqual({
+      input: { name: 'chicochat-imagem-1.png', itemtype: 'Ticket', items_id: 321 },
+    });
+    const file = form.get('filename[0]') as File;
+    expect(file.name).toBe('chicochat-imagem-1.png');
+    expect(file.type).toBe('image/png');
+    expect(Buffer.from(await file.arrayBuffer()).toString()).toBe('png!');
+
+    expect(byUrl('/api.php/v1/killSession')?.headers['session-token']).toBe('sessao-123');
+    // A API nova (OAuth) não é usada para o anexo.
+    expect(byUrl('/api.php/token')).toBeUndefined();
+  });
+
+  it('manda o App-Token em todas as chamadas, quando configurado', async () => {
+    await client({ appToken: 'app-token-fake' }).attachFile('321', FILE);
+    expect(requests.map((r) => r.headers['app-token'])).toEqual([
+      'app-token-fake',
+      'app-token-fake',
+      'app-token-fake',
+    ]);
+  });
+
+  it('login recusado vira GLPI_AUTH, sem enviar o arquivo', async () => {
+    sessionStatus = 401;
+    const error = await client()
+      .attachFile('321', FILE)
+      .catch((e: unknown) => e as GlpiError);
+    expect(error?.code).toBe('GLPI_AUTH');
+    expect(byUrl('/api.php/v1/Document')).toBeUndefined();
+  });
+
+  it('documento recusado vira GLPI_REJECTED, e a sessão é encerrada mesmo assim', async () => {
+    documentStatus = 400;
+    const error = await client()
+      .attachFile('321', FILE)
+      .catch((e: unknown) => e as GlpiError);
+    expect(error?.code).toBe('GLPI_REJECTED');
+    expect(byUrl('/api.php/v1/killSession')).toBeDefined();
+  });
+
+  it('a mensagem do erro não leva a senha nem o token da sessão', async () => {
+    documentStatus = 500;
+    const error = await client()
+      .attachFile('321', FILE)
+      .catch((e: unknown) => e as GlpiError);
+    expect(error?.code).toBe('GLPI_SERVER');
+    expect(JSON.stringify({ message: error?.message, code: error?.code })).not.toMatch(
+      /senha-fake|sessao-123/,
+    );
+  });
+});
+
 describe('GLPI falso', () => {
   it('abre chamados com números sequenciais e guarda o que recebeu', async () => {
     const fake = createFakeGlpi({ firstTicketId: 50 });
@@ -419,6 +554,9 @@ describe('GLPI falso', () => {
     });
     await fake.client.attachRequester('50', 7);
     expect(fake.tickets[0]?.requesterId).toBe(7);
+    const file = { name: 'a.png', mimeType: 'image/png', data: Buffer.from('x') };
+    await fake.client.attachFile('50', file);
+    expect(fake.files).toEqual([{ ticketId: '50', ...file }]);
   });
 
   it('simula falha de criação, busca e vínculo', async () => {
@@ -426,12 +564,15 @@ describe('GLPI falso', () => {
       createFails: new GlpiError('GLPI_TIMEOUT'),
       requester: 'missing',
       attachFails: true,
+      fileFails: true,
     });
     expect(await fake.client.findRequesterId('a@b.test')).toBeNull();
     expect(
       (await failure2(fake.client.createTicket({ title: 'a', content: 'b', urgency: 3 })))?.code,
     ).toBe('GLPI_TIMEOUT');
     expect((await failure2(fake.client.attachRequester('1', 1)))?.code).toBe('GLPI_SERVER');
+    const file = { name: 'a.png', mimeType: 'image/png', data: Buffer.from('x') };
+    expect((await failure2(fake.client.attachFile('1', file)))?.code).toBe('GLPI_SERVER');
     expect(fake.tickets).toHaveLength(0);
   });
 });

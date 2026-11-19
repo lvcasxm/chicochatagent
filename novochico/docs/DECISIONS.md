@@ -593,10 +593,26 @@ O número ADR-046 fica reservado à decisão de arquitetura (contexto completo, 
   4. **No PostgreSQL**, na tabela `message_images` (uma por mensagem, apagada junto com a mensagem). Entra no backup que já existe, sem volume nem serviço novo.
   5. **Envio em base64 no JSON da própria mensagem,** sem `multipart`. O limite de 64 KB do corpo continua para toda a API; só o envio de mensagem aceita até ~7 MB.
   6. **Acesso:** a imagem sai por `GET /api/conversations/:id/messages/:messageId/image`, só para o dono, e por `GET /api/transcripts/:token/images/:messageId`, para quem pode ler a transcrição. Fora disso, 404. Resposta com `no-store`, como o resto da API.
-  7. **Chamado:** o técnico vê a imagem na transcrição, pelo link que já vai no chamado. A imagem não é anexada ao GLPI por enquanto: a API da instância ainda não foi conferida para envio de arquivo (`PEND-05`).
+  7. **Chamado:** o técnico vê a imagem na transcrição, pelo link que já vai no chamado. O envio da imagem ao GLPI veio depois, na ADR-048.
   8. **Cache de respostas:** conversa com imagem não usa nem alimenta o cache, porque a resposta depende da imagem.
 - **Consequências e riscos:**
   - A imagem vai ao Google junto com o texto. Print de tela pode mostrar dados pessoais; isso agrava a `PEND-07` (envio ao Google e retenção).
   - O resumo do chamado continua só com o texto da conversa.
   - O painel do administrador ainda não mostra a imagem na leitura da conversa.
+
+## ADR-048 — Imagens da conversa anexadas ao chamado do GLPI
+
+Completa o item 7 da ADR-047.
+
+- **Contexto:** o técnico só via a imagem pela transcrição. A API nova do GLPI 11 (`/api.php`, usada para abrir o chamado) não recebe arquivo: o documento só tem campos de dados, e a rota `Timeline/Document` apenas liga um documento que já existe. A API legada recebe arquivo (`multipart/form-data` com `uploadManifest`) e, ao criar o documento com `itemtype` e `items_id`, o próprio GLPI o liga ao chamado. Conferido no código-fonte do GLPI 11 (`APIRest.php`, `Document::post_addItem`). Na instância, a API legada e o login por credenciais estão habilitados.
+- **Decisão:**
+  1. **Só o envio de arquivo usa a API legada.** Abrir, consultar e ligar o solicitante continuam na API nova.
+  2. **Sessão curta por arquivo:** `initSession` com o mesmo usuário de serviço (Basic), envio, `killSession` no fim, mesmo com falha. Sem guardar sessão.
+  3. **Depois de o chamado existir:** falhar ao anexar é aviso em log, como o vínculo do solicitante. A imagem continua na transcrição.
+  4. **PNG:** a imagem guardada (WebP) é convertida para PNG, que qualquer GLPI aceita como tipo de documento.
+  5. **Desligado por padrão** (`GLPI_ATTACH_IMAGES=false`) até a homologação na instância, com um chamado de teste (ADR-029). `GLPI_APP_TOKEN` só é enviado se configurado.
+- **Consequências e riscos:**
+  - Duas formas de falar com o GLPI. Se a API nova passar a receber arquivo, o envio migra para ela e a legada pode ser desligada.
+  - A API legada precisa continuar habilitada na instância, e o IP do servidor do ChicoChat+ precisa estar coberto por um cliente de API (Configurar → Geral → API → Clientes de API).
+  - Abrir o chamado fica mais lento quando há imagens: até três envios em sequência, cada um limitado por `GLPI_TIMEOUT_MS`.
 

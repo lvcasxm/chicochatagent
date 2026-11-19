@@ -161,6 +161,7 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
     glpi: deps.glpi !== undefined ? deps.glpi : createGlpiFromConfig(config.glpi),
     summaryLlm: deps.summaryLlm !== undefined ? deps.summaryLlm : configuredLlm.summaryLlm,
     ticketIpRegex: config.ticketIpRegex,
+    attachImages: config.glpiAttachImages,
     logger: deps.logger,
     now,
   });

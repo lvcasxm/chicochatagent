@@ -33,6 +33,7 @@ export function createTickets(deps: {
   glpi: GlpiClient | null;
   summaryLlm: LlmClient | null;
   ticketIpRegex: string;
+  attachImages: boolean;
   logger: Logger;
   now: () => Date;
 }) {
@@ -46,6 +47,7 @@ export function createTickets(deps: {
     glpi: deps.glpi,
     summaryLlm: deps.summaryLlm,
     ipPattern: new RegExp(deps.ticketIpRegex),
+    attachImages: deps.attachImages,
     logger: deps.logger,
     now: deps.now,
   });

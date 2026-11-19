@@ -113,6 +113,15 @@ const envSchema = z
     GLPI_PASSWORD: z.string().min(1).optional(),
     GLPI_REQUEST_TYPE_ID: z.coerce.number().int().positive().default(10),
     GLPI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(15_000),
+    // Imagens da conversa anexadas ao chamado (ADR-048). Usa a API legada do GLPI, a única que
+    // recebe arquivo; desligado até a homologação na instância.
+    GLPI_ATTACH_IMAGES: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
+    GLPI_LEGACY_API_PATH: z.string().startsWith('/').default('/api.php/v1'),
+    // Token do cliente de API (API legada), se o cliente cadastrado no GLPI tiver um.
+    GLPI_APP_TOKEN: z.string().min(1).optional(),
     // Formato do IP das máquinas (PEND-13). Padrão: o do sistema anterior.
     TICKET_IP_REGEX: z
       .string()
@@ -194,6 +203,10 @@ export interface GlpiConfig {
   password: string;
   requestTypeId: number;
   timeoutMs: number;
+  /** Caminho da API legada, usada só para enviar arquivos. */
+  legacyApiPath: string;
+  /** Token do cliente da API legada; nulo se o cliente não exige. */
+  appToken: string | null;
 }
 
 /** Como o sistema fala com o GLPI. `null`: sem credenciais, a abertura de chamado fica indisponível. */
@@ -220,6 +233,8 @@ export type Config = {
   /** Portal de chamados do GLPI; nulo quando não configurado. */
   glpiPortalUrl: string | null;
   glpi: GlpiSetting;
+  /** Anexar ao chamado as imagens da conversa (ADR-048). */
+  glpiAttachImages: boolean;
   /** Formato aceito para o IP da máquina no chamado. */
   ticketIpRegex: string;
 };
@@ -305,9 +320,12 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
                 password: data.GLPI_PASSWORD,
                 requestTypeId: data.GLPI_REQUEST_TYPE_ID,
                 timeoutMs: data.GLPI_TIMEOUT_MS,
+                legacyApiPath: data.GLPI_LEGACY_API_PATH,
+                appToken: data.GLPI_APP_TOKEN ?? null,
               },
             }
           : null,
+    glpiAttachImages: data.GLPI_ATTACH_IMAGES,
     ticketIpRegex: data.TICKET_IP_REGEX,
   };
 }

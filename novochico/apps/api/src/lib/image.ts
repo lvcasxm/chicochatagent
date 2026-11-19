@@ -34,3 +34,11 @@ export async function prepareImage(input: Buffer): Promise<StoredImage | null> {
     return null;
   }
 }
+
+/**
+ * Converte a imagem guardada para PNG, formato que qualquer GLPI aceita como documento (o WebP
+ * depende da lista de tipos de cada instância). A conversão não perde mais nada da imagem guardada.
+ */
+export function toPng(data: Buffer): Promise<Buffer> {
+  return sharp(data).png().toBuffer();
+}

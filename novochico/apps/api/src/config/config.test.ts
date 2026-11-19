@@ -46,6 +46,7 @@ describe('loadConfig', () => {
       chatCacheEnabled: true,
       glpiPortalUrl: null,
       glpi: null,
+      glpiAttachImages: false,
       ticketIpRegex: DEFAULT_IP_PATTERN,
     });
   });
@@ -79,6 +80,38 @@ describe('loadConfig', () => {
     ).toThrow(/AI_PROVIDER/);
     expect(() => loadConfig({ ...VALID, GLPI_PORTAL_URL: 'javascript:alert(1)' })).toThrow(
       /GLPI_PORTAL_URL/,
+    );
+  });
+
+  it('lê o GLPI de verdade, com o anexo de imagens e a API legada', () => {
+    const glpi = {
+      GLPI_PROVIDER: 'glpi',
+      GLPI_URL: 'https://glpi.example.test/',
+      GLPI_CLIENT_ID: 'cliente',
+      GLPI_CLIENT_SECRET: 'segredo',
+      GLPI_USERNAME: 'servico',
+      GLPI_PASSWORD: 'senha',
+    };
+    const defaults = loadConfig({ ...VALID, ...glpi });
+    expect(defaults.glpiAttachImages).toBe(false);
+    expect(defaults.glpi).toMatchObject({
+      provider: 'glpi',
+      config: { url: 'https://glpi.example.test', legacyApiPath: '/api.php/v1', appToken: null },
+    });
+
+    const on = loadConfig({
+      ...VALID,
+      ...glpi,
+      GLPI_ATTACH_IMAGES: 'true',
+      GLPI_LEGACY_API_PATH: '/apirest.php',
+      GLPI_APP_TOKEN: 'token-do-cliente',
+    });
+    expect(on.glpiAttachImages).toBe(true);
+    expect(on.glpi).toMatchObject({
+      config: { legacyApiPath: '/apirest.php', appToken: 'token-do-cliente' },
+    });
+    expect(failureOf({ ...VALID, GLPI_ATTACH_IMAGES: 'sim' }).message).toContain(
+      'GLPI_ATTACH_IMAGES',
     );
   });
 

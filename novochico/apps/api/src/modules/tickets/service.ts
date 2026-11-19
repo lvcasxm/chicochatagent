@@ -13,11 +13,12 @@ import { GlpiError, type GlpiClient, type GlpiTicket } from '../../integrations/
 import { parseGlpiDate, toPlainText } from '../../lib/plain-text';
 import type { LlmClient } from '../../integrations/gemini/llm';
 import { AppError } from '../../lib/errors';
+import { toPng } from '../../lib/image';
 import type { Logger } from '../../lib/logger';
 import type { AnalyticsService } from '../analytics';
 import type { ContentService } from '../content';
 import type { TranscriptsService } from '../transcripts';
-import type { ConversationRow, ConversationsService } from '../conversations';
+import type { ConversationRow, ConversationsService, TranscriptLine } from '../conversations';
 import { buildTicketContent } from './description';
 import {
   COLLECTIVE_MAX_TICKETS,
@@ -112,6 +113,8 @@ export interface TicketsServiceDeps {
   summaryLlm: LlmClient | null;
   /** Formato aceito do IP da máquina (PEND-13). */
   ipPattern: RegExp;
+  /** Anexar ao chamado as imagens da conversa (ADR-048). */
+  attachImages: boolean;
   logger: Logger;
   now: () => Date;
 }
@@ -169,6 +172,36 @@ export function createTicketsService(deps: TicketsServiceDeps) {
   }
 
   /** Categoria travada pelo card (RF-041): o título do card, que é o nome da categoria do chamado. */
+  /**
+   * Anexa ao chamado, como documentos, as imagens da conversa (ADR-048). O chamado já existe:
+   * cada falha só gera aviso, e a imagem continua acessível pela transcrição.
+   */
+  async function attachConversationImages(
+    client: GlpiClient,
+    ticketId: string,
+    transcript: TranscriptLine[],
+    conversationId: string,
+  ): Promise<void> {
+    const messageIds = transcript.flatMap((line) =>
+      line.imageMessageId ? [line.imageMessageId] : [],
+    );
+    if (!deps.attachImages || messageIds.length === 0) return;
+    const images = await conversations.images(messageIds);
+    for (const [index, messageId] of messageIds.entries()) {
+      const image = images.get(messageId);
+      if (!image) continue;
+      try {
+        await client.attachFile(ticketId, {
+          name: `chicochat-imagem-${index + 1}.png`,
+          mimeType: 'image/png',
+          data: await toPng(image.data),
+        });
+      } catch (error) {
+        logger.warn({ err: error, conversationId }, 'Falha ao anexar imagem ao chamado');
+      }
+    }
+  }
+
   async function cardCategoryOf(row: ConversationRow): Promise<string | null> {
     if (!row.categoryKey) return null;
     const categories = await content.listChatCategories();
@@ -528,6 +561,7 @@ export function createTicketsService(deps: TicketsServiceDeps) {
       const response = responseFor(
         final ?? { ...attempt, ...base, status: 'success', glpiTicketId: created.ticketId },
       );
+      await attachConversationImages(glpi, created.ticketId, transcript, conversationId);
 
       await conversations.addMessage({
         conversationId,
