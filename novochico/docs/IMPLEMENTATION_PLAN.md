@@ -120,7 +120,7 @@ flowchart LR
 **Dependências:** F0. Pode correr em paralelo a F1 e F2. ADRs 007, 024, 025.
 
 **Critérios de conclusão**
-- Tokens de claro e escuro; tema segue o sistema e persiste a escolha, sem flash.
+- Tokens de claro e escuro; tema segue o aparelho e persiste a escolha, sem flash; o seletor só oferece claro e escuro.
 - Inter e Montserrat auto-hospedadas; nenhuma requisição a CDN externa.
 - Componentes: Button, IconButton, Field, Input, Textarea, Checkbox, Dialog, Select, Tooltip, Toast, Skeleton, EmptyState, ErrorState, Markdown, Logo.
 - Página `/_design` (só em desenvolvimento) mostra componentes e estados nos dois temas.

@@ -1,25 +1,27 @@
-import { Monitor, Moon, Sun } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '../app/theme/ThemeProvider';
-import type { ThemePreference } from '../app/theme/theme';
+import type { ResolvedTheme } from '../app/theme/theme';
 import { IconButton } from './IconButton';
 
-const OPTIONS: Array<{ value: ThemePreference; label: string; icon: typeof Sun }> = [
-  { value: 'system', label: 'Tema do sistema', icon: Monitor },
+const OPTIONS: Array<{ value: ResolvedTheme; label: string; icon: typeof Sun }> = [
   { value: 'light', label: 'Tema claro', icon: Sun },
   { value: 'dark', label: 'Tema escuro', icon: Moon },
 ];
 
-/** Três escolhas visíveis de uma vez (reconhecer em vez de lembrar). A escolha fica salva. */
+/**
+ * Claro e escuro, com o tema em uso marcado. A tela já abre no tema do aparelho; escolher o mesmo
+ * tema do aparelho volta a acompanhá-lo, e escolher o outro fica salvo.
+ */
 export function ThemeSwitch() {
-  const { preference, setPreference } = useTheme();
+  const { resolved, setTheme } = useTheme();
   return (
     <div role="group" aria-label="Tema" className="flex items-center">
       {OPTIONS.map(({ value, label, icon: Icon }) => (
         <IconButton
           key={value}
           label={label}
-          pressed={preference === value}
-          onClick={() => setPreference(value)}
+          pressed={resolved === value}
+          onClick={() => setTheme(value)}
           icon={<Icon className="size-5" />}
         />
       ))}
