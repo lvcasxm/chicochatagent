@@ -165,7 +165,7 @@ describe('tela inicial', () => {
     expect(screen.getByRole('link', { name: /abrir chamado no glpi/i }).getAttribute('href')).toBe(
       PORTAL,
     );
-    expect(screen.getByText(/pode cometer erros/i)).toBeTruthy();
+    expect(screen.getByText(/posso cometer erros/i)).toBeTruthy();
   });
 
   it('atalho de chat cria a conversa com a categoria e envia a mensagem pronta', async () => {

@@ -92,7 +92,8 @@ export function Composer({ cards, disabled = false, autoFocus = false, onSend }:
         />
       </form>
       <p className="type-small text-fg-muted">
-        O ChicoChat+ pode cometer erros. Verifique informações importantes.
+        Sou o assistente de IA da Prefeitura, mas posso cometer erros. Verifique informações
+        importantes.
       </p>
     </div>
   );
