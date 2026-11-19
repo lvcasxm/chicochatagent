@@ -18,6 +18,7 @@ import { TruncatedText } from './TruncatedText';
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe('Button', () => {
@@ -243,60 +244,65 @@ describe('Markdown', () => {
 });
 
 describe('tema', () => {
-  it('segue o sistema por padrão, sem gravar nada', () => {
-    render(
+  function renderSwitch() {
+    return render(
       <ThemeProvider>
         <ThemeSwitch />
       </ThemeProvider>,
     );
+  }
+  const pressed = (name: string) =>
+    screen.getByRole('button', { name }).getAttribute('aria-pressed');
+
+  it('abre no tema do aparelho, sem gravar nada, e só oferece claro e escuro', () => {
+    renderSwitch();
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
-    expect(
-      screen.getByRole('button', { name: 'Tema do sistema' }).getAttribute('aria-pressed'),
-    ).toBe('true');
+    expect(pressed('Tema claro')).toBe('true');
+    expect(pressed('Tema escuro')).toBe('false');
+    expect(screen.getAllByRole('button')).toHaveLength(2);
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
   });
 
-  it('a escolha é aplicada ao documento e persiste', async () => {
-    const view = render(
-      <ThemeProvider>
-        <ThemeSwitch />
-      </ThemeProvider>,
+  it('abre escuro quando o aparelho está no escuro', () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) =>
+        ({
+          matches: query === '(prefers-color-scheme: dark)',
+          media: query,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        }) as unknown as MediaQueryList,
     );
+    renderSwitch();
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(pressed('Tema escuro')).toBe('true');
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
+  });
+
+  it('a escolha diferente do aparelho é aplicada ao documento e persiste', async () => {
+    const view = renderSwitch();
     await userEvent.click(screen.getByRole('button', { name: 'Tema escuro' }));
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
 
     // Uma nova visita lê a escolha salva.
     view.unmount();
-    render(
-      <ThemeProvider>
-        <ThemeSwitch />
-      </ThemeProvider>,
-    );
+    renderSwitch();
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
-    expect(screen.getByRole('button', { name: 'Tema escuro' }).getAttribute('aria-pressed')).toBe(
-      'true',
-    );
+    expect(pressed('Tema escuro')).toBe('true');
   });
 
-  it('voltar para "sistema" apaga a escolha salva', async () => {
+  it('escolher o tema do aparelho apaga a escolha salva', async () => {
     localStorage.setItem(THEME_STORAGE_KEY, 'dark');
-    render(
-      <ThemeProvider>
-        <ThemeSwitch />
-      </ThemeProvider>,
-    );
-    await userEvent.click(screen.getByRole('button', { name: 'Tema do sistema' }));
+    renderSwitch();
+    await userEvent.click(screen.getByRole('button', { name: 'Tema claro' }));
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
   });
 
   it('valor salvo inválido é ignorado', () => {
     localStorage.setItem(THEME_STORAGE_KEY, 'roxo');
-    render(
-      <ThemeProvider>
-        <ThemeSwitch />
-      </ThemeProvider>,
-    );
+    renderSwitch();
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
   });
 });

@@ -15,9 +15,10 @@ import {
 } from './theme';
 
 interface ThemeContextValue {
-  preference: ThemePreference;
+  /** O tema em uso: a escolha salva ou, sem ela, o do aparelho. */
   resolved: ResolvedTheme;
-  setPreference: (preference: ThemePreference) => void;
+  /** Escolher o mesmo tema do aparelho apaga a escolha salva, e a tela volta a acompanhá-lo. */
+  setTheme: (theme: ResolvedTheme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -32,7 +33,7 @@ function subscribeToSystemTheme(onChange: () => void) {
 
 const systemPrefersDark = () => window.matchMedia(DARK_QUERY).matches;
 
-/** Aplica o tema ao documento e o mantém em dia com a escolha e com o sistema. */
+/** Aplica o tema ao documento e o mantém em dia com a escolha e com o tema do aparelho. */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [preference, setPreferenceState] = useState<ThemePreference>(readStoredPreference);
   const systemDark = useSyncExternalStore(subscribeToSystemTheme, systemPrefersDark, () => false);
@@ -45,14 +46,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<ThemeContextValue>(
     () => ({
-      preference,
       resolved,
-      setPreference: (next) => {
+      setTheme: (theme) => {
+        const next: ThemePreference = theme === (systemDark ? 'dark' : 'light') ? 'system' : theme;
         storePreference(next);
         setPreferenceState(next);
       },
     }),
-    [preference, resolved],
+    [resolved, systemDark],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

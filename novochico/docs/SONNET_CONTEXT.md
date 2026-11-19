@@ -79,7 +79,7 @@ Mostra logotipo vertical, "Como posso te ajudar hoje?" em destaque logo acima do
 - **RF-017** Abrir conversa antiga com histórico e estado de triagem. `[CORREÇÃO]`
 - **RF-018** Excluir conversa com confirmação; some da visão do usuário. `[LEGADO]` A retenção é `[PENDENTE: PEND-07; padrão exclusão lógica]`.
 - **RF-019** Gerar título: rótulo curto para mensagem pronta; título inteligente para texto real (até 50 caracteres); refinar quando o usuário descrever o problema. `[LEGADO]`
-- **RF-020** Tema claro/escuro; padrão do sistema; escolha persistida. `[LEGADO]`
+- **RF-020** Tema claro/escuro; abre no tema do aparelho; o seletor só oferece claro e escuro, e a escolha diferente da do aparelho fica salva. `[LEGADO]`
 - **RF-021** Atualizar triagem pelo marcador de tentativa, liberar formulário pelo marcador ou pela frase de escalonamento. Ver seção H. `[LEGADO, agora no servidor]`
 - **RF-022** Filtrar marcadores do stream antes de enviar e de gravar. `[CORREÇÃO]`
 - **RF-023** Detectar "resolvido" e "persiste" na fala do usuário; persistência tem precedência. Ver H.5. `[LEGADO]`
